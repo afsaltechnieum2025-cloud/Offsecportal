@@ -5,6 +5,23 @@ const db = require('../db');
 const { sendProjectAssignmentEmail } = require('../utils/emailService');
 
 // ─────────────────────────────────────────────────────────────
+//  HELPER: Auto-generate next project code (e.g. TOP004)
+// ─────────────────────────────────────────────────────────────
+async function generateProjectCode() {
+  const [rows] = await db.query(
+    `SELECT project_code FROM projects
+     WHERE project_code LIKE 'TOP%'
+     ORDER BY new_id DESC LIMIT 1`
+  );
+
+  if (!rows.length) return 'TOP001';
+
+  const last = rows[0].project_code;           // e.g. "TOP003"
+  const num  = parseInt(last.replace('TOP', ''), 10);
+  return `TOP${String(num + 1).padStart(3, '0')}`;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  GET /api/projects/test-email
 //  Test route: ?user_id=26&project_id=b5a5531d-...
 //  Usage: hit this URL in browser to trigger a test email
@@ -191,14 +208,18 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    // ── Auto-generate the next project code ──────────────────
+    const projectCode = await generateProjectCode();
+
     const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
     await db.query(
-      `INSERT INTO projects (id, name, client, description, domain, ip_addresses, start_date, end_date, created_by, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, name, client, description, domain,
+      `INSERT INTO projects (id, name, project_code, client, description, domain, ip_addresses, start_date, end_date, created_by, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [newId, name, projectCode, client, description, domain,
         ip_addresses ? JSON.stringify(ip_addresses) : null,
         start_date || null, end_date || null, created_by || null, status]
     );
+
     const [rows] = await db.query('SELECT * FROM projects WHERE id = ?', [newId]);
     res.status(201).json({
       ...rows[0],
@@ -324,7 +345,6 @@ router.get('/:id/assignments', async (req, res) => {
 
     const userMap = {};
     users.forEach(u => {
-      // users table has `name` column (not username) — use full_name if available
       userMap[String(u.id)] = u.full_name || u.name || u.email || String(u.id);
     });
 
@@ -346,8 +366,6 @@ router.get('/:id/assignments', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.post('/:id/assignments', async (req, res) => {
   const { user_id, assigned_by_id } = req.body;
-  // assigned_by_id is optional — send it from the frontend if you want
-  // the assigner's real name in the email (e.g. user.id from AuthContext)
 
   if (!user_id) return res.status(400).json({ message: 'user_id is required' });
 
@@ -360,19 +378,16 @@ router.post('/:id/assignments', async (req, res) => {
 
     // ── EMAIL NOTIFICATION ────────────────────────────────────
     try {
-      // Fetch full project data
       const [[project]] = await db.query(
         `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`,
         [req.params.id]
       );
 
-      // Fetch the assignee (person receiving the email)
       const [[assignee]] = await db.query(
         `SELECT id, name, full_name, email FROM users WHERE id = ?`,
         [user_id]
       );
 
-      // Fetch the assigner's name if assigned_by_id was provided
       let assignerName = 'Technieum Management';
       if (assigned_by_id) {
         const [[assigner]] = await db.query(
@@ -390,7 +405,6 @@ router.post('/:id/assignments', async (req, res) => {
 
         console.log(`[Email] Triggering assignment email → ${toEmail} (${toName}) for project "${project.name}" by "${assignerName}"`);
 
-        // Fire-and-forget — email failure must NOT break the assignment response
         sendProjectAssignmentEmail({
           toEmail,
           toName,
