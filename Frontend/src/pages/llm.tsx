@@ -155,6 +155,7 @@ export default function LLM() {
               letterSpacing: '-0.01em',
               marginBottom: '32px',
               lineHeight: 1.1,
+              textAlign: 'center',
             }}>
               Large Language{' '}
               <span style={{
