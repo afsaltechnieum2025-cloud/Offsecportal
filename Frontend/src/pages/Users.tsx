@@ -8,14 +8,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Search, 
-  Mail, 
-  Calendar, 
+  Search,
+  Mail,
+  Calendar,
   MoreVertical,
-  UserPlus, 
-  Loader2, 
-  Plus, 
-  Trash2, 
+  UserPlus,
+  Loader2,
+  Trash2,
   FolderKanban,
   Users as UsersIcon,
   Crown,
@@ -25,9 +24,10 @@ import {
   UserCheck,
   UserX,
   AtSign,
-  Clock,
-  Settings,
-  Star
+  Star,
+  Building2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -44,7 +44,7 @@ import {
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialog, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -53,7 +53,7 @@ import { triggerNotifyRefresh } from '@/utils/notifyRefresh';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
-type AppRole = 'admin' | 'manager' | 'tester';
+type AppRole = 'admin' | 'manager' | 'tester' | 'client';
 
 interface UserWithRole {
   id: number;
@@ -76,7 +76,27 @@ interface ProjectAssignment {
   user_id: number;
 }
 
-// Helper function to capitalize role
+// ── Validation helpers ────────────────────────────────────────────────────────
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+
+interface FormErrors {
+  name?: string;
+  full_name?: string;
+  email?: string;
+  password?: string;
+}
+
+const validateForm = (user: { name: string; full_name: string; email: string; password: string }): FormErrors => {
+  const errors: FormErrors = {};
+  if (!user.name.trim()) errors.name = 'Username is required.';
+  if (!user.full_name.trim()) errors.full_name = 'Full name is required.';
+  if (!user.email.trim()) errors.email = 'Email is required.';
+  else if (!EMAIL_REGEX.test(user.email)) errors.email = 'Enter a valid email address.';
+  if (!user.password) errors.password = 'Password is required.';
+  else if (user.password.length < 8) errors.password = 'Password must be at least 8 characters.';
+  return errors;
+};
+
 const capitalizeRole = (role: AppRole | null): string => {
   if (!role) return 'No role';
   return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
@@ -87,18 +107,29 @@ export default function Users() {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Role dialog
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [newRole, setNewRole] = useState<AppRole>('tester');
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Create user dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<UserWithRole | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [newUser, setNewUser] = useState({
     name: '', email: '', password: '', full_name: '', role: 'tester' as AppRole,
   });
+
+  // Delete dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithRole | null>(null);
+
+  // Projects dialog
   const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false);
   const [selectedUserForProjects, setSelectedUserForProjects] = useState<UserWithRole | null>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -106,11 +137,10 @@ export default function Users() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSavingAssignments, setIsSavingAssignments] = useState(false);
 
-  // New state for user profile dialog
+  // Profile dialog
   const [selectedUserForProfile, setSelectedUserForProfile] = useState<UserWithRole | null>(null);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
-  // Only admins can access this page
   if (role !== 'admin') return <Navigate to="/dashboard" replace />;
 
   useEffect(() => { fetchUsers(); }, []);
@@ -121,13 +151,70 @@ export default function Users() {
       const res = await fetch(`${API}/users`);
       const data = await res.json();
       setUsers(data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load users');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ── Reset create-dialog state on close ───────────────────────────────────
+  const resetCreateDialog = () => {
+    setNewUser({ name: '', email: '', password: '', full_name: '', role: 'tester' });
+    setFormErrors({});
+    setTouched({});
+    setShowPassword(false);
+  };
+
+  const handleCreateDialogChange = (open: boolean) => {
+    setIsCreateDialogOpen(open);
+    if (!open) resetCreateDialog();
+  };
+
+  // ── Live validation on field change ─────────────────────────────────────
+  const handleFieldChange = (field: keyof typeof newUser, value: string) => {
+    const updated = { ...newUser, [field]: value };
+    setNewUser(updated);
+    // Only re-validate if form was already submitted once
+    if (Object.keys(touched).length > 0) {
+      setFormErrors(validateForm(updated));
+    }
+  };
+
+  const handleFieldBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    setFormErrors(validateForm(newUser));
+  };
+
+  // ── Submit ───────────────────────────────────────────────────────────────
+  const handleCreateUser = async () => {
+    // Mark all fields as touched so errors show
+    setTouched({ name: true, full_name: true, email: true, password: true });
+    const errors = validateForm(newUser);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setIsCreating(true);
+    try {
+      const res = await fetch(`${API}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success('User created successfully!');
+      setIsCreateDialogOpen(false);
+      resetCreateDialog();
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create user');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // ── Role dialog ──────────────────────────────────────────────────────────
   const handleChangeRole = (user: UserWithRole) => {
     setSelectedUser(user);
     setNewRole(user.role || 'tester');
@@ -155,31 +242,7 @@ export default function Users() {
     }
   };
 
-  const handleCreateUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    setIsCreating(true);
-    try {
-      const res = await fetch(`${API}/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success('User created successfully!');
-      setIsCreateDialogOpen(false);
-      setNewUser({ name: '', email: '', password: '', full_name: '', role: 'tester' });
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create user');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
+  // ── Delete ───────────────────────────────────────────────────────────────
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     setIsDeleting(true);
@@ -202,6 +265,7 @@ export default function Users() {
     setIsDeleteDialogOpen(true);
   };
 
+  // ── Projects ─────────────────────────────────────────────────────────────
   const openProjectsDialog = async (user: UserWithRole) => {
     setSelectedUserForProjects(user);
     setIsProjectsDialogOpen(true);
@@ -250,6 +314,7 @@ export default function Users() {
   const isProjectAssigned = (projectId: number) =>
     userAssignments.some(a => a.project_id === projectId);
 
+  // ── Profile ──────────────────────────────────────────────────────────────
   const openUserProfile = (user: UserWithRole, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedUserForProfile(user);
@@ -261,44 +326,59 @@ export default function Users() {
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // ── UI helpers ────────────────────────────────────────────────────────────
   const getRoleBadge = (userRole: AppRole | null) => {
     if (!userRole) return (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-border text-muted-foreground">
         No role
       </span>
     );
-
-    const displayRole = capitalizeRole(userRole);
     const styles: Record<AppRole, string> = {
-      admin:   'bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/30',
+      admin: 'bg-primary/15 text-primary border-primary/40',
       manager: 'bg-primary/15 text-primary border-primary/40',
-      tester:  'bg-secondary text-muted-foreground border-border',
+      tester: 'bg-secondary text-muted-foreground border-border',
+      client: 'bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/30',
     };
-
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles[userRole]}`}>
-        {displayRole}
+        {capitalizeRole(userRole)}
       </span>
     );
   };
 
   const getRoleIcon = (userRole: AppRole | null) => {
     switch (userRole) {
-      case 'admin':
-        return <Crown className="h-4 w-4" />;
-      case 'manager':
-        return <Briefcase className="h-4 w-4" />;
-      case 'tester':
-        return <ShieldCheck className="h-4 w-4" />;
-      default:
-        return <UserCog className="h-4 w-4" />;
+      case 'admin': return <Crown className="h-4 w-4" />;
+      case 'manager': return <Briefcase className="h-4 w-4" />;
+      case 'tester': return <ShieldCheck className="h-4 w-4" />;
+      case 'client': return <Building2 className="h-4 w-4" />;
+      default: return <UserCog className="h-4 w-4" />;
     }
   };
+
+  // ── Shared role select items ──────────────────────────────────────────────
+  const RoleSelectItems = () => (
+    <>
+      <SelectItem value="admin">
+        <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" />Admin</div>
+      </SelectItem>
+      <SelectItem value="manager">
+        <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-primary" />Manager</div>
+      </SelectItem>
+      <SelectItem value="tester">
+        <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />Tester</div>
+      </SelectItem>
+      <SelectItem value="client">
+        <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" />Client</div>
+      </SelectItem>
+    </>
+  );
 
   const roleStats = {
     admins: users.filter(u => u.role === 'admin').length,
     managers: users.filter(u => u.role === 'manager').length,
     testers: users.filter(u => u.role === 'tester').length,
+    clients: users.filter(u => u.role === 'client').length,
   };
 
   if (isLoading) {
@@ -315,61 +395,34 @@ export default function Users() {
     <DashboardLayout title="User Management" description="Manage team members and their roles">
       <div className="space-y-6 px-4 sm:px-0">
 
-        {/* Stats - Responsive grid with improved icons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="animate-fade-in hover:shadow-lg transition-all">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Crown className="h-3 w-3 text-primary" />
-                    Admins
-                  </p>
-                  <p className="text-2xl font-bold mt-1">{roleStats.admins}</p>
+        {/* ── Stats ──────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Admins', count: roleStats.admins, Icon: Crown },
+            { label: 'Managers', count: roleStats.managers, Icon: Briefcase },
+            { label: 'Testers', count: roleStats.testers, Icon: ShieldCheck },
+            { label: 'Clients', count: roleStats.clients, Icon: Building2 },
+          ].map(({ label, count, Icon }, i) => (
+            <Card key={label} className="animate-fade-in hover:shadow-lg transition-all" style={{ animationDelay: `${i * 50}ms` }}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Icon className="h-3 w-3 text-primary" />
+                      {label}
+                    </p>
+                    <p className="text-2xl font-bold mt-1">{count}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Icon className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Crown className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="animate-fade-in hover:shadow-lg transition-all" style={{ animationDelay: '50ms' }}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Briefcase className="h-3 w-3 text-blue-500" />
-                    Managers
-                  </p>
-                  <p className="text-2xl font-bold mt-1">{roleStats.managers}</p>
-                </div>
-                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Briefcase className="h-6 w-6 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="animate-fade-in hover:shadow-lg transition-all sm:col-span-2 lg:col-span-1" style={{ animationDelay: '100ms' }}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                    Testers
-                  </p>
-                  <p className="text-2xl font-bold mt-1">{roleStats.testers}</p>
-                </div>
-                <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <ShieldCheck className="h-6 w-6 text-emerald-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Filters + Add User - Responsive layout */}
+        {/* ── Search + Add User ──────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -380,7 +433,9 @@ export default function Users() {
               className="pl-10 bg-secondary/50 w-full"
             />
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+
+          {/* ── Create User Dialog ─────────────────────────────────────── */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
             <DialogTrigger asChild>
               <Button variant="gradient" className="w-full sm:w-auto">
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -397,41 +452,103 @@ export default function Users() {
                   Add a new team member to the platform
                 </DialogDescription>
               </DialogHeader>
+
               <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+
+                {/* Username */}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1 mb-2">
                     <AtSign className="h-3 w-3" />
                     Username <span className="text-destructive">*</span>
                   </Label>
-                  <Input placeholder="Enter username" value={newUser.name}
-                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+                  <Input
+                    placeholder="Enter username"
+                    value={newUser.name}
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    autoComplete="off"
+                    className={formErrors.name && touched.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  />
+                  {formErrors.name && touched.name && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.name}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+
+                {/* Full Name */}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1 mb-2">
                     <UserCheck className="h-3 w-3" />
-                    Full Name
+                    Full Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input placeholder="Enter full name" value={newUser.full_name}
-                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} />
+                  <Input
+                    placeholder="Enter full name"
+                    value={newUser.full_name}
+                    onChange={(e) => handleFieldChange('full_name', e.target.value)}
+                    className={formErrors.full_name && touched.full_name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  />
+                  {formErrors.full_name && touched.full_name && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.full_name}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1 mb-2">
                     <Mail className="h-3 w-3" />
                     Email <span className="text-destructive">*</span>
                   </Label>
-                  <Input type="email" placeholder="Enter email address" value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                  <Input
+                    type="email"
+                    placeholder="Enter email address"
+                    autoComplete="new-password"
+                    value={newUser.email}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                    className={formErrors.email && touched.email ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  />
+                  {formErrors.email && touched.email && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.email}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+
+                {/* Password with eye toggle */}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1 mb-2">
                     <Star className="h-3 w-3" />
                     Password <span className="text-destructive">*</span>
                   </Label>
-                  <Input type="password" placeholder="Enter password" value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min. 8 characters"
+                      value={newUser.password}
+                      autoComplete="new-password"
+                      onChange={(e) => handleFieldChange('password', e.target.value)}
+                      className={`pr-10 ${formErrors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword
+                        ? <EyeOff className="h-4 w-4" />
+                        : <Eye className="h-4 w-4" />
+                      }
+                    </button>
+                  </div>
+                  {formErrors.password && touched.password ? (
+                    <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
+                  ) : (
+                    /* Hint shown while field is empty / untouched */
+                    !newUser.password && (
+                      <p className="text-xs text-muted-foreground mt-1">Must be at least 8 characters.</p>
+                    )
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+
+                {/* Role */}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1 mb-2">
                     <UserCog className="h-3 w-3" />
                     Role
                   </Label>
@@ -440,33 +557,20 @@ export default function Users() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">
-                        <div className="flex items-center gap-2">
-                          <Crown className="h-4 w-4 text-primary" />
-                          Admin
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="manager">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-blue-500" />
-                          Manager
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="tester">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                          Tester
-                        </div>
-                      </SelectItem>
+                      <RoleSelectItems />
                     </SelectContent>
                   </Select>
                 </div>
+
                 <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => handleCreateDialogChange(false)}>
                     Cancel
                   </Button>
                   <Button variant="gradient" onClick={handleCreateUser} disabled={isCreating}>
-                    {isCreating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating...</> : 'Create User'}
+                    {isCreating
+                      ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating...</>
+                      : 'Create User'
+                    }
                   </Button>
                 </DialogFooter>
               </div>
@@ -474,7 +578,7 @@ export default function Users() {
           </Dialog>
         </div>
 
-        {/* Users Grid - Responsive grid */}
+        {/* ── Users Grid ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredUsers.map((member, index) => (
             <Card
@@ -493,9 +597,7 @@ export default function Users() {
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate flex items-center gap-1">
                         {member.name}
-                        {member.role === 'admin' && (
-                          <Crown className="h-3 w-3 text-primary inline-block" />
-                        )}
+                        {member.role === 'admin' && <Crown className="h-3 w-3 text-primary inline-block" />}
                       </p>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Mail className="h-3 w-3 shrink-0" />
@@ -511,19 +613,16 @@ export default function Users() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem onClick={() => handleChangeRole(member)}>
-                        <UserCog className="h-4 w-4 mr-2" />
-                        Change Role
+                        <UserCog className="h-4 w-4 mr-2" />Change Role
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openProjectsDialog(member)}>
-                        <FolderKanban className="h-4 w-4 mr-2" />
-                        Manage Projects
+                        <FolderKanban className="h-4 w-4 mr-2" />Manage Projects
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => openDeleteDialog(member)}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete User
+                        <Trash2 className="h-4 w-4 mr-2" />Delete User
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -553,7 +652,7 @@ export default function Users() {
           </Card>
         )}
 
-        {/* Change Role Dialog */}
+        {/* ── Change Role Dialog ─────────────────────────────────────────── */}
         <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -561,43 +660,18 @@ export default function Users() {
                 <UserCog className="h-5 w-5 text-primary" />
                 Change Role for {selectedUser?.name}
               </DialogTitle>
-              <DialogDescription>
-                Update the user's role and permissions
-              </DialogDescription>
+              <DialogDescription>Update the user's role and permissions</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Select New Role</Label>
                 <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">
-                      <div className="flex items-center gap-2">
-                        <Crown className="h-4 w-4 text-primary" />
-                        Admin
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="manager">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-blue-500" />
-                        Manager
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="tester">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                        Tester
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><RoleSelectItems /></SelectContent>
                 </Select>
               </div>
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsRoleDialogOpen(false)}>Cancel</Button>
                 <Button variant="gradient" onClick={saveRole} disabled={isSaving}>
                   {isSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Role'}
                 </Button>
@@ -606,7 +680,7 @@ export default function Users() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete User Dialog */}
+        {/* ── Delete User Dialog ─────────────────────────────────────────── */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -622,13 +696,16 @@ export default function Users() {
             <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
               <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting}>
-                {isDeleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting...</> : <><Trash2 className="h-4 w-4 mr-2" />Delete User</>}
+                {isDeleting
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting...</>
+                  : <><Trash2 className="h-4 w-4 mr-2" />Delete User</>
+                }
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Manage Projects Dialog */}
+        {/* ── Manage Projects Dialog ─────────────────────────────────────── */}
         <Dialog open={isProjectsDialogOpen} onOpenChange={setIsProjectsDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -678,14 +755,12 @@ export default function Users() {
               )}
             </div>
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setIsProjectsDialogOpen(false)}>
-                Done
-              </Button>
+              <Button variant="outline" onClick={() => setIsProjectsDialogOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* User Profile Dialog */}
+        {/* ── User Profile Dialog ───────────────────────────────────────── */}
         <UserProfileDialog
           userId={selectedUserForProfile?.id || 0}
           userName={selectedUserForProfile?.name || ''}
