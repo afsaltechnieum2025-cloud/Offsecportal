@@ -15,12 +15,12 @@ const SCAN_LINES = [
 ];
 
 export default function LLM() {
-  const [loading, setLoading]     = useState(true);
-  const [visible, setVisible]     = useState(false);
-  const [progress, setProgress]   = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [lineIndex, setLineIndex] = useState(0);
-  const [fadeOut, setFadeOut]     = useState(false);
-  const [scanDots, setScanDots]   = useState('');
+  const [fadeOut, setFadeOut] = useState(false);
+  const [scanDots, setScanDots] = useState('');
 
   // Fade in on mount
   useEffect(() => {
@@ -110,7 +110,6 @@ export default function LLM() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '0',
             width: 'min(480px, 90vw)',
           }}>
 
@@ -119,10 +118,8 @@ export default function LLM() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '14px',
-              marginBottom: '40px',
+              gap: '6px',
             }}>
-              {/* Technieum logo image */}
               <img
                 src={technieumLogo}
                 alt="Technieum"
@@ -133,35 +130,23 @@ export default function LLM() {
                   filter: 'drop-shadow(0 0 12px rgba(249,115,22,0.5))',
                 }}
               />
-              <div style={{ textAlign: 'center' }}>
-                {/* <div style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#f97316',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  lineHeight: 1,
-                }}>TECHNIEUM</div> */}
-                <div style={{
-                  fontSize: '9px',
-                  fontWeight: 500,
-                  color: 'rgba(249,115,22,0.5)',
-                  letterSpacing: '1.25em',
-                  textTransform: 'uppercase',
-                  // marginTop: '5px',
-                }}>OffSec Portal</div>
+              <div style={{
+                fontSize: '28px',
+                fontWeight: 700,
+                color: '#ffffff',
+                letterSpacing: '-0.01em',
+                marginBottom: '28px',
+                lineHeight: 1.1,
+                textAlign: 'center',
+              }}>
+                OffSec{' '}
+                <span style={{
+                  background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}>Portal</span>
               </div>
             </div>
-
-            {/* LLM label */}
-            <div style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.25em',
-              color: 'rgba(249,115,22,0.5)',
-              textTransform: 'uppercase',
-              marginBottom: '10px',
-            }}>Loading Module</div>
 
             <div style={{
               fontSize: '28px',

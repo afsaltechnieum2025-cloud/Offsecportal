@@ -585,7 +585,7 @@ export default function Users() {
               key={member.id}
               glow
               className="animate-fade-in cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg group"
-              onClick={() => openUserProfile(member, { stopPropagation: () => { } } as React.MouseEvent)}
+              onClick={(e) => member.role !== 'client' && openUserProfile(member, { stopPropagation: () => { } } as React.MouseEvent)}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <CardContent className="p-4">

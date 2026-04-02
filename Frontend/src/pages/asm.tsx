@@ -15,12 +15,12 @@ const SCAN_LINES = [
 ];
 
 export default function ASM() {
-  const [loading, setLoading]       = useState(true);
-  const [visible, setVisible]       = useState(false);
-  const [progress, setProgress]     = useState(0);
-  const [lineIndex, setLineIndex]   = useState(0);
-  const [fadeOut, setFadeOut]       = useState(false);
-  const [scanDots, setScanDots]     = useState('');
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [lineIndex, setLineIndex] = useState(0);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [scanDots, setScanDots] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -76,17 +76,19 @@ export default function ASM() {
           overflow: 'hidden',
         }}>
 
+          {/* Grid background */}
           <div style={{
             position: 'absolute',
             inset: 0,
             backgroundImage: `
-              linear-gradient(rgba(249,115,22,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(249,115,22,0.03) 1px, transparent 1px)
-            `,
+            linear-gradient(rgba(249,115,22,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(249,115,22,0.03) 1px, transparent 1px)
+          `,
             backgroundSize: '48px 48px',
             pointerEvents: 'none',
           }} />
 
+          {/* Radial glow */}
           <div style={{
             position: 'absolute',
             top: '50%',
@@ -98,23 +100,22 @@ export default function ASM() {
             pointerEvents: 'none',
           }} />
 
+          {/* Main content — true center */}
           <div style={{
             position: 'relative',
             zIndex: 1,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '0',
             width: 'min(480px, 90vw)',
           }}>
 
-            {/* Logo stacked above wordmark */}
+            {/* Logo */}
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '14px',
-              marginBottom: '40px',
+              gap: '6px',
             }}>
               <img
                 src={technieumLogo}
@@ -126,42 +127,33 @@ export default function ASM() {
                   filter: 'drop-shadow(0 0 12px rgba(249,115,22,0.5))',
                 }}
               />
-              <div style={{ textAlign: 'center' }}>
-                {/* <div style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#f97316',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  lineHeight: 1,
-                }}>TECHNIEUM</div> */}
-                <div style={{
-                  fontSize: '9px',
-                  fontWeight: 500,
-                  color: 'rgba(249,115,22,0.5)',
-                  letterSpacing: '1.25em',
-                  textTransform: 'uppercase',
-                  // marginTop: '5px',
-                }}>OffSec Portal</div>
+              <div style={{
+                fontSize: '28px',
+                fontWeight: 700,
+                color: '#ffffff',
+                letterSpacing: '-0.01em',
+                marginBottom: '28px',
+                lineHeight: 1.1,
+                textAlign: 'center',
+              }}>
+                OffSec{' '}
+                <span style={{
+                  background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}>Portal</span>
               </div>
             </div>
 
-            <div style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.25em',
-              color: 'rgba(249,115,22,0.5)',
-              textTransform: 'uppercase',
-              marginBottom: '10px',
-            }}>Loading Module</div>
-
+            {/* Title */}
             <div style={{
               fontSize: '28px',
               fontWeight: 700,
               color: '#ffffff',
               letterSpacing: '-0.01em',
-              marginBottom: '32px',
+              marginBottom: '28px',
               lineHeight: 1.1,
+              textAlign: 'center',
             }}>
               Attack Surface{' '}
               <span style={{
@@ -171,7 +163,8 @@ export default function ASM() {
               }}>Management</span>
             </div>
 
-            <div style={{ width: '100%', marginBottom: '12px' }}>
+            {/* Progress bar */}
+            <div style={{ width: '100%', marginBottom: '10px' }}>
               <div style={{
                 height: '2px',
                 background: 'rgba(249,115,22,0.12)',
@@ -189,12 +182,13 @@ export default function ASM() {
               </div>
             </div>
 
+            {/* Progress labels */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               width: '100%',
-              marginBottom: '24px',
+              marginBottom: '20px',
             }}>
               <div style={{
                 fontSize: '11px',
@@ -212,20 +206,25 @@ export default function ASM() {
               </div>
             </div>
 
+            {/* System log */}
             <div style={{
               width: '100%',
               background: 'rgba(0,0,0,0.4)',
               border: '1px solid rgba(249,115,22,0.1)',
               borderRadius: '8px',
-              padding: '14px 16px',
-              minHeight: '120px',
+              padding: '16px 18px',
+              height: '180px',
+              overflowY: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
             }}>
               <div style={{
                 fontSize: '9px',
                 fontWeight: 600,
                 letterSpacing: '0.2em',
                 color: 'rgba(249,115,22,0.4)',
-                marginBottom: '10px',
+                marginBottom: '12px',
                 textTransform: 'uppercase',
               }}>System Log</div>
               {SCAN_LINES.slice(0, lineIndex + 1).map((line, i) => {
@@ -235,7 +234,7 @@ export default function ASM() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    marginBottom: '5px',
+                    marginBottom: '6px',
                     opacity: isCurrent ? 1 : 0.35,
                     transition: 'opacity 0.3s ease',
                   }}>
@@ -271,17 +270,17 @@ export default function ASM() {
                 );
               })}
             </div>
-
           </div>
 
+          {/* Phase indicators — pinned to bottom */}
           <div style={{
             position: 'absolute',
-            bottom: '24px',
+            bottom: '28px',
             left: 0,
             right: 0,
             display: 'flex',
             justifyContent: 'center',
-            gap: '24px',
+            gap: '28px',
           }}>
             {['RECON', 'INTEL', 'VULN SCAN', 'REPORTING'].map((phase, i) => (
               <div key={phase} style={{
@@ -312,11 +311,11 @@ export default function ASM() {
           </div>
 
           <style>{`
-            @keyframes blink {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0; }
-            }
-          `}</style>
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+          }
+        `}</style>
         </div>
       )}
 

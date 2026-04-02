@@ -15,12 +15,12 @@ const SCAN_LINES = [
 ];
 
 export default function TOIP() {
-  const [loading, setLoading]     = useState(true);
-  const [visible, setVisible]     = useState(false);
-  const [progress, setProgress]   = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [lineIndex, setLineIndex] = useState(0);
-  const [fadeOut, setFadeOut]     = useState(false);
-  const [scanDots, setScanDots]   = useState('');
+  const [fadeOut, setFadeOut] = useState(false);
+  const [scanDots, setScanDots] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -104,7 +104,6 @@ export default function TOIP() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '0',
             width: 'min(480px, 90vw)',
           }}>
 
@@ -113,8 +112,7 @@ export default function TOIP() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '14px',
-              marginBottom: '40px',
+              gap: '6px',
             }}>
               <img
                 src={technieumLogo}
@@ -126,25 +124,23 @@ export default function TOIP() {
                   filter: 'drop-shadow(0 0 12px rgba(249,115,22,0.5))',
                 }}
               />
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '9px',
-                  fontWeight: 500,
-                  color: 'rgba(249,115,22,0.5)',
-                  letterSpacing: '1.25em',
-                  textTransform: 'uppercase',
-                }}>OffSec Portal</div>
+              <div style={{
+                fontSize: '28px',
+                fontWeight: 700,
+                color: '#ffffff',
+                letterSpacing: '-0.01em',
+                marginBottom: '28px',
+                lineHeight: 1.1,
+                textAlign: 'center',
+              }}>
+                OffSec{' '}
+                <span style={{
+                  background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}>Portal</span>
               </div>
             </div>
-
-            <div style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.25em',
-              color: 'rgba(249,115,22,0.5)',
-              textTransform: 'uppercase',
-              marginBottom: '10px',
-            }}>Loading Module</div>
 
             <div style={{
               fontSize: '28px',
@@ -153,13 +149,14 @@ export default function TOIP() {
               letterSpacing: '-0.01em',
               marginBottom: '32px',
               lineHeight: 1.1,
+              textAlign: 'center',
             }}>
-              Offensive{' '}
+              Technieum Offensive Security{' '}
               <span style={{
                 background: 'linear-gradient(90deg, #f97316, #fb923c)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-              }}>Intelligence</span>
+              }}>Intelligence Portal</span>
             </div>
 
             <div style={{ width: '100%', marginBottom: '12px' }}>
