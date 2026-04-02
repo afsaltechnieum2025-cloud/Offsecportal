@@ -38,16 +38,16 @@ import { useState, useEffect } from 'react';
 import logo from '@/assets/technieum-logo.png';
 
 const navigation = [
-  { name: 'Dashboard',    href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'tester'] },
-  { name: 'Projects',     href: '/projects',  icon: FolderKanban,    roles: ['admin', 'manager', 'tester'] },
-  { name: 'Findings',     href: '/findings',  icon: Bug,             roles: ['admin', 'manager', 'tester'] },
-  { name: 'Wall Of Fame', href: '/HallofFame',icon: Trophy,          roles: ['admin', 'manager', 'tester'] },
-  { name: 'Trending',     href: '/trending',  icon: TrendingUp,      roles: ['admin', 'manager', 'tester'] },
-  { name: 'Users',        href: '/users',     icon: Users,           roles: ['admin'] },
-  { name: 'ASM',          href: '/asm',       icon: Globe,           roles: ['admin'] },
-  { name: 'LLM Suite',    href: '/llm',       icon: Brain,           roles: ['admin'] },
-  { name: 'TOIP',         href: '/toip',      icon: Network,         roles: ['admin'] },
-  { name: 'SAST',         href: '/sast',      icon: ShieldCheck,     roles: ['admin'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'tester'] },
+  { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin', 'manager', 'tester'] },
+  { name: 'Findings', href: '/findings', icon: Bug, roles: ['admin', 'manager', 'tester'] },
+  { name: 'Wall Of Fame', href: '/HallofFame', icon: Trophy, roles: ['admin', 'manager'] },
+  { name: 'Trending', href: '/trending', icon: TrendingUp, roles: ['admin', 'manager', 'tester'] },
+  { name: 'Users', href: '/users', icon: Users, roles: ['admin', 'manager'] },
+  { name: 'ASM', href: '/asm', icon: Globe, roles: ['admin', 'manager', 'tester'] },
+  { name: 'LLM Suite', href: '/llm', icon: Brain, roles: ['admin', 'manager', 'tester'] },
+  { name: 'TOIP', href: '/toip', icon: Network, roles: ['admin', 'manager', 'tester'] },
+  { name: 'SAST', href: '/sast', icon: ShieldCheck, roles: ['admin', 'manager', 'tester'] },
 ];
 
 export default function AppSidebar() {
