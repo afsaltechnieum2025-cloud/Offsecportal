@@ -671,7 +671,7 @@ export default function Dashboard() {
             <div className="h-8 w-1 rounded-full bg-gradient-to-b from-orange-500 to-orange-600 shrink-0" />
             <div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">
-                Technieum Offensive Security Tool Sets
+                Technieum Offensive Security Tools
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Documentation &amp; Reports
