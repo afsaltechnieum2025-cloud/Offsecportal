@@ -136,6 +136,11 @@ export default function Dashboard() {
       const res = await fetch(`${API_BASE}/projects`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data: Project[] = await res.json();
+      console.debug('[Dashboard] Current user from AuthContext:', JSON.stringify(user));
+      console.debug('[Dashboard] Raw projects from API:', JSON.stringify(data));
+      data.forEach(p => {
+        console.debug(`[Dashboard] Project "${p.name}" assignedTesters:`, JSON.stringify(p.assignedTesters));
+      });
       setProjects(data);
       fetchAllFindings(data);
     } catch (error) {
@@ -221,35 +226,71 @@ export default function Dashboard() {
     }
   };
 
+  // ─── Role helpers ─────────────────────────────────────────────────────────────
+  // Admin and Manager both see ALL data; only Tester sees filtered/assigned data
+  const isAdminOrManager = role === 'admin' || role === 'manager';
+
+  // ─── Tester assignment check ──────────────────────────────────────────────────
+  // Compares against both string and number forms of user.id to handle API type mismatches
+  const isAssignedToProject = (project: Project): boolean => {
+    if (!user || !project.assignedTesters) {
+      console.debug('[Dashboard] isAssignedToProject: no user or no assignedTesters', {
+        user,
+        projectId: project.id,
+        assignedTesters: project.assignedTesters,
+      });
+      return false;
+    }
+    const userId = user.id;
+    const match = project.assignedTesters.some(t => String(t) === String(userId));
+    console.debug('[Dashboard] isAssignedToProject check', {
+      projectId: project.id,
+      projectName: project.name,
+      assignedTesters: project.assignedTesters,
+      userId,
+      userIdType: typeof userId,
+      match,
+    });
+    return match;
+  };
+
+  // ─── userFindings: admin+manager see all, tester sees only assigned ───────────
+
+  const userFindings = useMemo(() => {
+    if (isAdminOrManager) return allFindings;
+    const assignedProjectIds = new Set(
+      projects.filter(isAssignedToProject).map(p => p.id)
+    );
+    return allFindings.filter(f => assignedProjectIds.has(f.project_id));
+  }, [user, role, projects, allFindings]);
+
   // ─── Derived stats ────────────────────────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const userProjects = role === 'tester'
-      ? projects.filter(p => user && p.assignedTesters?.includes(String(user.id)))
-      : projects;
-
-    const projectIds = new Set(userProjects.map(p => p.id));
-    const userFindings = allFindings.filter(f => projectIds.has(f.project_id));
+    // Admin + Manager → all projects; Tester → only assigned projects
+    const userProjects = isAdminOrManager
+      ? projects
+      : projects.filter(isAssignedToProject);
 
     const criticalFindings = userFindings.filter(f => normalizeSeverity(f.severity) === 'Critical').length;
-    const highFindings = userFindings.filter(f => normalizeSeverity(f.severity) === 'High').length;
-    const mediumFindings = userFindings.filter(f => normalizeSeverity(f.severity) === 'Medium').length;
-    const lowFindings = userFindings.filter(f => normalizeSeverity(f.severity) === 'Low').length;
-    const infoFindings = userFindings.filter(f => normalizeSeverity(f.severity) === 'Informational').length;
+    const highFindings     = userFindings.filter(f => normalizeSeverity(f.severity) === 'High').length;
+    const mediumFindings   = userFindings.filter(f => normalizeSeverity(f.severity) === 'Medium').length;
+    const lowFindings      = userFindings.filter(f => normalizeSeverity(f.severity) === 'Low').length;
+    const infoFindings     = userFindings.filter(f => normalizeSeverity(f.severity) === 'Informational').length;
 
     return {
-      totalProjects: userProjects.length,
-      activeProjects: userProjects.filter(p => p.status === 'active').length,
+      totalProjects:     userProjects.length,
+      activeProjects:    userProjects.filter(p => p.status === 'active').length,
       completedProjects: userProjects.filter(p => p.status === 'completed').length,
-      overdueProjects: userProjects.filter(p => p.status === 'overdue').length,
-      totalFindings: userFindings.length,
+      overdueProjects:   userProjects.filter(p => p.status === 'overdue').length,
+      totalFindings:     userFindings.length,
       criticalFindings,
       highFindings,
       mediumFindings,
       lowFindings,
       infoFindings,
     };
-  }, [user, role, projects, allFindings]);
+  }, [user, role, projects, userFindings]);
 
   // ─── Chart data ───────────────────────────────────────────────────────────────
 
@@ -265,7 +306,7 @@ export default function Dashboard() {
     const months: Record<string, { month: string; findings: number; projects: Set<string> }> = {};
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    allFindings.forEach(f => {
+    userFindings.forEach(f => {
       const d = new Date(f.created_at);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (!months[key]) {
@@ -286,13 +327,13 @@ export default function Dashboard() {
         projects: entry ? entry.projects.size : 0,
       };
     });
-  }, [allFindings]);
+  }, [userFindings]);
 
-  // ─── Full project list filtered by role (NOT pre-sliced) ─────────────────────
+  // ─── Visible projects: admin+manager see all, tester sees only assigned ───────
 
   const visibleProjects = useMemo(() => {
-    if (role === 'admin') return projects;
-    return projects.filter(p => user && p.assignedTesters?.includes(String(user.id)));
+    if (isAdminOrManager) return projects;
+    return projects.filter(isAssignedToProject);
   }, [user, role, projects]);
 
   const getProjectFindingCount = (projectId: string) =>
@@ -475,7 +516,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-2 animate-fade-in hidden sm:block" style={{ animationDelay: '250ms' }}>
+          <Card className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
             <CardHeader>
               <CardTitle className="text-lg">Findings Trend</CardTitle>
             </CardHeader>
@@ -525,7 +566,6 @@ export default function Dashboard() {
             <CardContent className="space-y-3">
               {visibleProjects.length > 0 ? (
                 <>
-                  {/* Fixed-width wrapper — scrollbar-gutter keeps width stable */}
                   <div
                     className="space-y-3 overflow-y-auto"
                     style={{
@@ -576,8 +616,8 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Team Members */}
-          {(role === 'admin' || role === 'manager') && (
+          {/* Team Members — admin and manager only */}
+          {isAdminOrManager && (
             <Card className="animate-fade-in" style={{ animationDelay: '550ms' }}>
               <CardHeader>
                 <CardTitle className="text-lg">Team Members</CardTitle>
@@ -585,7 +625,6 @@ export default function Dashboard() {
               <CardContent className="space-y-3">
                 {teamMembers.length > 0 ? (
                   <>
-                    {/* Fixed-width wrapper — scrollbar-gutter keeps width stable */}
                     <div
                       className="space-y-3 overflow-y-auto"
                       style={{
@@ -665,7 +704,7 @@ export default function Dashboard() {
 
         </div>
 
-        {/* ── Documentation Section ────────────────────────────────────────── */}
+        {/* ── Documentation Section — all roles ───────────────────────────── */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-1 rounded-full bg-gradient-to-b from-orange-500 to-orange-600 shrink-0" />

@@ -16,15 +16,40 @@ async function generateProjectCode() {
 
   if (!rows.length) return 'TOP001';
 
-  const last = rows[0].project_code;           // e.g. "TOP003"
+  const last = rows[0].project_code;
   const num  = parseInt(last.replace('TOP', ''), 10);
   return `TOP${String(num + 1).padStart(3, '0')}`;
 }
 
 // ─────────────────────────────────────────────────────────────
+//  HELPER: Fetch assignedTesters (array of user_id strings)
+//  for one or more project IDs
+// ─────────────────────────────────────────────────────────────
+async function fetchAssignedTesters(projectIds) {
+  if (!projectIds.length) return {};
+
+  const placeholders = projectIds.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT project_id, user_id
+     FROM project_assignments
+     WHERE project_id IN (${placeholders})`,
+    projectIds
+  );
+
+  // Build a map: { project_id -> [user_id, user_id, ...] }
+  const map = {};
+  projectIds.forEach(id => { map[id] = []; });
+  rows.forEach(r => {
+    if (map[r.project_id]) {
+      map[r.project_id].push(String(r.user_id));
+    }
+  });
+
+  return map;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  GET /api/projects/test-email
-//  Test route: ?user_id=26&project_id=b5a5531d-...
-//  Usage: hit this URL in browser to trigger a test email
 // ─────────────────────────────────────────────────────────────
 router.get('/test-email', async (req, res) => {
   const { user_id, project_id } = req.query;
@@ -37,22 +62,18 @@ router.get('/test-email', async (req, res) => {
   }
 
   try {
-    // Fetch project from DB — validates the project_id actually exists
     const [[project]] = await db.query(
       `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`,
       [project_id]
     );
-
     if (!project) {
       return res.status(404).json({ message: `Project not found for id: ${project_id}` });
     }
 
-    // Fetch user from DB — validates the user_id actually exists
     const [[user]] = await db.query(
       `SELECT id, name, full_name, email FROM users WHERE id = ?`,
       [user_id]
     );
-
     if (!user) {
       return res.status(404).json({ message: `User not found for id: ${user_id}` });
     }
@@ -60,10 +81,8 @@ router.get('/test-email', async (req, res) => {
     const toName  = user.full_name || user.name;
     const toEmail = user.email;
 
-    // Log what we're about to send so you can verify in terminal
     console.log('[TEST EMAIL] Sending with data:', {
-      toEmail,
-      toName,
+      toEmail, toName,
       projectName: project.name,
       clientName:  project.client,
       startDate:   project.start_date,
@@ -72,8 +91,7 @@ router.get('/test-email', async (req, res) => {
     });
 
     const result = await sendProjectAssignmentEmail({
-      toEmail,
-      toName,
+      toEmail, toName,
       projectName: project.name,
       clientName:  project.client,
       startDate:   project.start_date,
@@ -82,32 +100,26 @@ router.get('/test-email', async (req, res) => {
       projectId:   project.id,
     });
 
-    // Return full details so you can verify correct data was used
     res.json({
       success: true,
       message: `Test email sent successfully to ${toEmail}`,
       resend_id: result.id,
       sent_data: {
-        to:          toEmail,
-        name:        toName,
-        project:     project.name,
-        client:      project.client,
-        start_date:  project.start_date,
-        end_date:    project.end_date,
-        project_id:  project.id,
+        to: toEmail, name: toName,
+        project: project.name, client: project.client,
+        start_date: project.start_date, end_date: project.end_date,
+        project_id: project.id,
       },
     });
   } catch (err) {
     console.error('[TEST EMAIL] Failed:', err.message);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // ─────────────────────────────────────────────────────────────
 //  GET /api/projects
+//  Now includes assignedTesters: ["29", "31", ...]
 // ─────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
@@ -129,6 +141,10 @@ router.get('/', async (req, res) => {
       ORDER BY p.created_at DESC
     `);
 
+    // ── Fetch assignedTesters for all projects in one query ──
+    const projectIds    = rows.map(r => r.id);
+    const testersMap    = await fetchAssignedTesters(projectIds);
+
     res.json(rows.map(row => ({
       ...row,
       ip_addresses: row.ip_addresses
@@ -141,6 +157,7 @@ router.get('/', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
+      assignedTesters: testersMap[row.id] ?? [],   // ← NEW: ["29", "31", ...]
     })));
   } catch (err) {
     console.error('GET /api/projects error:', err);
@@ -150,6 +167,7 @@ router.get('/', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 //  GET /api/projects/:id
+//  Also includes assignedTesters
 // ─────────────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
@@ -173,7 +191,9 @@ router.get('/:id', async (req, res) => {
 
     if (rows.length === 0) return res.status(404).json({ message: 'Project not found' });
 
-    const row = rows[0];
+    const row        = rows[0];
+    const testersMap = await fetchAssignedTesters([row.id]);
+
     res.json({
       ...row,
       ip_addresses: row.ip_addresses
@@ -186,6 +206,7 @@ router.get('/:id', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
+      assignedTesters: testersMap[row.id] ?? [],   // ← NEW
     });
   } catch (err) {
     console.error('GET /api/projects/:id error:', err);
@@ -208,7 +229,6 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // ── Auto-generate the next project code ──────────────────
     const projectCode = await generateProjectCode();
 
     const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
@@ -225,7 +245,9 @@ router.post('/', async (req, res) => {
       ...rows[0],
       ip_addresses: rows[0].ip_addresses ? JSON.parse(rows[0].ip_addresses) : null,
       findings_count: 0, critical_count: 0, high_count: 0,
-      medium_count: 0, low_count: 0, info_count: 0, assignees_count: 0,
+      medium_count: 0, low_count: 0, info_count: 0,
+      assignees_count: 0,
+      assignedTesters: [],   // ← NEW: empty on creation
     });
   } catch (err) {
     console.error('POST /api/projects error:', err);
@@ -238,7 +260,7 @@ router.post('/', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const fields = req.body;
+  const fields  = req.body;
 
   const allowed = [
     'name', 'client', 'description', 'domain',
@@ -247,9 +269,7 @@ router.patch('/:id', async (req, res) => {
 
   const keys = Object.keys(fields).filter(k => allowed.includes(k));
   const values = keys.map(k => {
-    if (k === 'ip_addresses' && Array.isArray(fields[k])) {
-      return JSON.stringify(fields[k]);
-    }
+    if (k === 'ip_addresses' && Array.isArray(fields[k])) return JSON.stringify(fields[k]);
     return fields[k];
   });
 
@@ -287,7 +307,9 @@ router.patch('/:id', async (req, res) => {
       GROUP BY p.id
     `, [id]);
 
-    const row = rows[0];
+    const row        = rows[0];
+    const testersMap = await fetchAssignedTesters([row.id]);
+
     res.json({
       ...row,
       ip_addresses: row.ip_addresses
@@ -300,6 +322,7 @@ router.patch('/:id', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
+      assignedTesters: testersMap[row.id] ?? [],   // ← NEW
     });
   } catch (err) {
     console.error('PATCH /api/projects/:id error:', err);
@@ -394,9 +417,7 @@ router.post('/:id/assignments', async (req, res) => {
           `SELECT name, full_name FROM users WHERE id = ?`,
           [assigned_by_id]
         );
-        if (assigner) {
-          assignerName = assigner.full_name || assigner.name;
-        }
+        if (assigner) assignerName = assigner.full_name || assigner.name;
       }
 
       if (project && assignee && assignee.email) {
@@ -406,8 +427,7 @@ router.post('/:id/assignments', async (req, res) => {
         console.log(`[Email] Triggering assignment email → ${toEmail} (${toName}) for project "${project.name}" by "${assignerName}"`);
 
         sendProjectAssignmentEmail({
-          toEmail,
-          toName,
+          toEmail, toName,
           projectName: project.name,
           clientName:  project.client,
           startDate:   project.start_date,
@@ -415,7 +435,6 @@ router.post('/:id/assignments', async (req, res) => {
           assignedBy:  assignerName,
           projectId:   project.id,
         }).catch(e => console.error('[Email] Assignment notification failed:', e.message));
-
       } else {
         console.warn('[Email] Skipped — missing project, assignee, or email address', { project, assignee });
       }

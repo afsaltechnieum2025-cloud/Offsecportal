@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ import {
 type Project = {
   id: string;
   name: string;
-  project_code?: string;        // ← NEW
+  project_code?: string;
   client: string;
   description: string | null;
   domain: string | null;
@@ -76,6 +76,7 @@ type Project = {
   end_date: string | null;
   created_at: string;
   created_by: string | null;
+  assignedTesters?: (string | number)[];   // ← returned by backend
   findings_count?: number;
   critical_count?: number;
   high_count?: number;
@@ -121,7 +122,7 @@ export default function Projects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);   // ← renamed: full API response
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -171,6 +172,25 @@ export default function Projects() {
     fetchProjects();
     fetchProfiles();
   }, [user]);
+
+  // ─── Role helpers ─────────────────────────────────────────────────────────
+
+  const isAdminOrManager = role === 'admin' || role === 'manager';
+
+  /** Safely compare IDs regardless of string vs number from API */
+  const isAssignedToProject = (project: Project): boolean => {
+    if (!user?.id || !project.assignedTesters) return false;
+    return project.assignedTesters.some(
+      (t) => String(t) === String(user.id)
+    );
+  };
+
+  // ─── Visible projects memo (same pattern as Findings page) ───────────────
+
+  const visibleProjects = useMemo(() => {
+    if (isAdminOrManager) return allProjects;
+    return allProjects.filter(isAssignedToProject);
+  }, [allProjects, isAdminOrManager, user?.id]);
 
   // ─── Fetch projects ───────────────────────────────────────────────────────
 
@@ -222,7 +242,7 @@ export default function Projects() {
         })
       );
 
-      setProjects(projectsWithCounts);
+      setAllProjects(projectsWithCounts);   // ← store in allProjects
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');
@@ -269,9 +289,9 @@ export default function Projects() {
     }
   };
 
-  // ─── Filter ───────────────────────────────────────────────────────────────
+  // ─── Filter (applied to visibleProjects, not allProjects) ────────────────
 
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = visibleProjects.filter((project) => {
     const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -578,7 +598,7 @@ export default function Projects() {
             </SelectContent>
           </Select>
 
-          {(role === 'admin' || role === 'manager') && (
+          {isAdminOrManager && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="gradient-technieum"><Plus className="h-4 w-4 mr-2" />New Project</Button>
@@ -700,14 +720,20 @@ export default function Projects() {
         {filteredProjects.length === 0 ? (
           <Card className="p-12">
             <div className="text-center text-muted-foreground">
-              {projects.length === 0 ? (
+              {visibleProjects.length === 0 ? (
                 <>
                   <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary/30 flex items-center justify-center">
                     <Globe className="h-10 w-10 text-muted-foreground/50" />
                   </div>
-                  <p className="text-lg font-medium">No projects yet</p>
-                  <p className="text-sm mt-1">Create your first project to get started with security assessments</p>
-                  {(role === 'admin' || role === 'manager') && (
+                  <p className="text-lg font-medium">
+                    {isAdminOrManager ? 'No projects yet' : 'No assigned projects yet'}
+                  </p>
+                  <p className="text-sm mt-1">
+                    {isAdminOrManager
+                      ? 'Create your first project to get started with security assessments'
+                      : 'You have not been assigned to any projects yet. Contact your manager to get assigned.'}
+                  </p>
+                  {isAdminOrManager && (
                     <Button className="gradient-technieum mt-4" onClick={() => setIsDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />Create Project
                     </Button>
@@ -746,7 +772,7 @@ export default function Projects() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {getStatusBadge(project.status)}
-                      {(role === 'admin' || role === 'manager') && (
+                      {isAdminOrManager && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -824,7 +850,7 @@ export default function Projects() {
                       <span className="text-sm text-muted-foreground">Total Findings</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      {(role === 'admin' || role === 'manager') && (
+                      {isAdminOrManager && (
                         <Button variant="ghost" size="sm" onClick={() => openAssignDialog(project)}>
                           <UserPlus className="h-4 w-4 mr-1" />Assign
                         </Button>

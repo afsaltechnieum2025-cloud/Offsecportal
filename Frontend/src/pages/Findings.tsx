@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +68,7 @@ interface Finding {
 interface FindingPoc {
   id: string;
   finding_id: string;
-  file_path: string; // now a base64 data URL from backend
+  file_path: string;
   file_name: string;
   uploaded_by: string;
   uploaded_at: string;
@@ -78,6 +78,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
+  assignedTesters?: string[];
 }
 
 interface Assignee {
@@ -95,13 +96,16 @@ export default function Findings() {
   const { user, role } = useAuth();
   const userId = (user?.id ?? '') as string;
 
+  // Admin + Manager see everything; Tester sees only assigned projects
+  const isAdminOrManager = role === 'admin' || role === 'manager';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
 
-  const [findings, setFindings] = useState<Finding[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [allFindings, setAllFindings] = useState<Finding[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [assigneeMap, setAssigneeMap] = useState<Record<string, Assignee[]>>({});
   const [pocs, setPocs] = useState<Record<string, FindingPoc[]>>({});
 
@@ -143,7 +147,6 @@ export default function Findings() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  // ─── Helper: file → base64 preview (for form staging only) ──────────────────
   const fileToDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -152,6 +155,26 @@ export default function Findings() {
       reader.readAsDataURL(file);
     });
 
+  // ─── Role-filtered projects & findings ───────────────────────────────────────
+
+  // Projects visible to this user
+  const visibleProjects = useMemo(() => {
+    if (isAdminOrManager) return allProjects;
+    return allProjects.filter(p =>
+      p.assignedTesters?.some(t => String(t) === String(userId))
+    );
+  }, [isAdminOrManager, allProjects, userId]);
+
+  // Findings scoped to visible projects only
+  const findings = useMemo(() => {
+    const visibleIds = new Set(visibleProjects.map(p => p.id));
+    return allFindings.filter(f => visibleIds.has(f.project_id));
+  }, [allFindings, visibleProjects]);
+
+  // Projects shown in the "Add Finding" form dropdown
+  // Testers can only add findings to their assigned projects
+  const formProjects = visibleProjects;
+
   // ─── Data Fetching ────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
@@ -159,31 +182,29 @@ export default function Findings() {
     try {
       const projectsRes = await fetch(`${API_BASE}/projects`, { headers: authHeaders() });
       const projectsData: Project[] = projectsRes.ok ? await projectsRes.json() : [];
-      setProjects(projectsData);
-
-      let allFindings: Finding[] = [];
+      setAllProjects(projectsData);
 
       if (projectsData.length > 0) {
-        const results = await Promise.all(
+        // Fetch findings for ALL projects (we'll filter in the memo above)
+        const findingResults = await Promise.all(
           projectsData.map(p =>
             fetch(`${API_BASE}/findings?project_id=${p.id}`, { headers: authHeaders() })
               .then(r => r.ok ? r.json() : [])
           )
         );
-        allFindings = results.flat();
-      }
+        const flat: Finding[] = findingResults.flat();
 
-      const severityOrder: Record<string, number> = {
-        critical: 0, high: 1, medium: 2, low: 3, informational: 4,
-      };
-      allFindings.sort(
-        (a, b) =>
-          (severityOrder[a.severity.toLowerCase()] ?? 5) -
-          (severityOrder[b.severity.toLowerCase()] ?? 5)
-      );
-      setFindings(allFindings);
+        const severityOrder: Record<string, number> = {
+          critical: 0, high: 1, medium: 2, low: 3, informational: 4,
+        };
+        flat.sort(
+          (a, b) =>
+            (severityOrder[a.severity?.toLowerCase()] ?? 5) -
+            (severityOrder[b.severity?.toLowerCase()] ?? 5)
+        );
+        setAllFindings(flat);
 
-      if (projectsData.length > 0) {
+        // Assignee map
         const assigneeResults = await Promise.all(
           projectsData.map(p =>
             fetch(`${API_BASE}/projects/${p.id}/assignments`, { headers: authHeaders() })
@@ -194,20 +215,20 @@ export default function Findings() {
         const map: Record<string, Assignee[]> = {};
         assigneeResults.forEach(({ projectId, rows }) => { map[projectId] = rows; });
         setAssigneeMap(map);
-      }
 
-      if (allFindings.length > 0) {
-        // ── file_path from backend is already a base64 data URL — use directly ──
-        const pocResults = await Promise.all(
-          allFindings.map(f =>
-            fetch(`${API_BASE}/findings/${f.id}/pocs`, { headers: authHeaders() })
-              .then(r => r.ok ? r.json() : [])
-              .then((rows: FindingPoc[]) => ({ findingId: f.id, rows }))
-          )
-        );
-        const pocMap: Record<string, FindingPoc[]> = {};
-        pocResults.forEach(({ findingId, rows }) => { pocMap[findingId] = rows; });
-        setPocs(pocMap);
+        // POCs
+        if (flat.length > 0) {
+          const pocResults = await Promise.all(
+            flat.map(f =>
+              fetch(`${API_BASE}/findings/${f.id}/pocs`, { headers: authHeaders() })
+                .then(r => r.ok ? r.json() : [])
+                .then((rows: FindingPoc[]) => ({ findingId: f.id, rows }))
+            )
+          );
+          const pocMap: Record<string, FindingPoc[]> = {};
+          pocResults.forEach(({ findingId, rows }) => { pocMap[findingId] = rows; });
+          setPocs(pocMap);
+        }
       }
     } catch (error) {
       console.error('Error fetching findings data:', error);
@@ -230,7 +251,7 @@ export default function Findings() {
   };
 
   const getProjectName = (projectId: string) =>
-    projects.find(p => p.id === projectId)?.name ?? 'Unknown Project';
+    allProjects.find(p => p.id === projectId)?.name ?? 'Unknown Project';
 
   const resetForm = () => {
     setFormData({
@@ -246,7 +267,7 @@ export default function Findings() {
       critical: 'Critical', high: 'High', medium: 'Medium',
       low: 'Low', informational: 'Informational', info: 'Informational',
     };
-    return map[s.toLowerCase()] ?? 'Informational';
+    return map[s?.toLowerCase()] ?? 'Informational';
   };
 
   const SEVERITY_STYLES: Record<Severity, { bg: string; text: string; border: string }> = {
@@ -301,6 +322,15 @@ export default function Findings() {
     }
     if (!user) { toast.error('You must be logged in'); return; }
 
+    // Guard: tester can only submit to their assigned projects
+    if (!isAdminOrManager) {
+      const allowed = visibleProjects.some(p => p.id === formData.projectId);
+      if (!allowed) {
+        toast.error('You can only add findings to your assigned projects');
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`${API_BASE}/findings`, {
         method: 'POST',
@@ -343,14 +373,13 @@ export default function Findings() {
             });
             if (pocRes.ok) {
               const poc: FindingPoc = await pocRes.json();
-              // backend returns file_path as base64 data URL already
               uploadedPocs.push(poc);
             }
           } catch (_) {}
         }
       }
 
-      setFindings(prev => [newFinding, ...prev]);
+      setAllFindings(prev => [newFinding, ...prev]);
       setPocs(prev => ({ ...prev, [newFinding.id]: uploadedPocs }));
       toast.success(`Finding added${uploadedPocs.length > 0 ? ` with ${uploadedPocs.length} POC(s)` : ''}!`);
       resetForm();
@@ -402,7 +431,7 @@ export default function Findings() {
         toast.error('Failed to delete: ' + (err.message ?? res.statusText));
         return;
       }
-      setFindings(prev => prev.filter(f => f.id !== deletingFindingId));
+      setAllFindings(prev => prev.filter(f => f.id !== deletingFindingId));
       toast.success('Finding deleted');
     } catch (error) {
       console.error('Error deleting finding:', error);
@@ -442,7 +471,6 @@ export default function Findings() {
         return;
       }
 
-      // backend returns file_path as base64 data URL — use directly
       const newPoc: FindingPoc = await res.json();
       setPocs(prev => ({
         ...prev,
@@ -506,7 +534,7 @@ export default function Findings() {
         return;
       }
       const updated: Finding = await res.json();
-      setFindings(prev => prev.map(f => f.id === findingId ? updated : f));
+      setAllFindings(prev => prev.map(f => f.id === findingId ? updated : f));
       toast.success(`Retest status updated to "${status}"`);
     } catch (error) {
       console.error('Error updating retest status:', error);
@@ -570,13 +598,14 @@ export default function Findings() {
             </SelectContent>
           </Select>
 
+          {/* Project filter shows only visible projects */}
           <Select value={projectFilter} onValueChange={setProjectFilter}>
             <SelectTrigger className="w-full sm:w-48 bg-secondary/50">
               <SelectValue placeholder="Filter by Project" />
             </SelectTrigger>
             <SelectContent className="max-w-[calc(100vw-2rem)] w-full">
               <SelectItem value="all">All Projects</SelectItem>
-              {projects.map(p => (
+              {visibleProjects.map(p => (
                 <SelectItem key={p.id} value={p.id} className="truncate max-w-full">
                   <span className="truncate block max-w-[calc(100vw-4rem)]">{p.name}</span>
                 </SelectItem>
@@ -599,10 +628,11 @@ export default function Findings() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Project *</Label>
+                    {/* formProjects = visibleProjects, so testers only see their assigned projects */}
                     <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
                       <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                       <SelectContent>
-                        {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        {formProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -664,10 +694,6 @@ export default function Findings() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Proof of Concept (POC)</Label>
-                    {/* <Button type="button" variant="outline" size="sm" onClick={() => formPocInputRef.current?.click()}>
-                      <Upload className="h-4 w-4 mr-1" />
-                      Add Images
-                    </Button> */}
                     <input ref={formPocInputRef} type="file" accept=".jpg,.jpeg,.png" multiple className="hidden" onChange={handleFormPocSelect} />
                   </div>
                   {pendingPocs.length > 0 ? (
@@ -703,7 +729,7 @@ export default function Findings() {
           </Dialog>
         </div>
 
-        {/* Stats */}
+        {/* Stats — scoped to visible findings */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {(['Critical', 'High', 'Medium', 'Low', 'Informational'] as Severity[]).map(severity => {
             const count = findings.filter(f => normalizeSeverity(f.severity) === severity).length;
@@ -728,7 +754,11 @@ export default function Findings() {
             <Card className="p-12 text-center">
               <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-lg font-medium">No findings found</p>
-              <p className="text-sm text-muted-foreground mt-1">Click the "Add Finding" button to create your first finding</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {findings.length === 0 && !isAdminOrManager
+                  ? 'You have no findings in your assigned projects yet.'
+                  : 'Click the "Add Finding" button to create your first finding'}
+              </p>
             </Card>
           ) : (
             filteredFindings.map((finding, index) => {
@@ -808,7 +838,7 @@ export default function Findings() {
                         </div>
                       )}
 
-                      {/* POC Images — file_path is base64 data URL from DB */}
+                      {/* POC Images */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-sm font-semibold text-primary">Proof of Concept (POC)</h4>
