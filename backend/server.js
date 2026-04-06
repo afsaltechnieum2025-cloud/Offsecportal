@@ -17,13 +17,11 @@ app.use('/docs', express.static(path.join(__dirname, 'docs'), {
 }));
 
 // CORS configuration
-app.use(cors({ 
+app.use(cors({
   origin: [
-    'http://localhost:5173', 
-    'http://localhost:3000', 
-    'http://localhost:8080', 
-    'http://16.170.204.151',
-    'https://your-live-frontend.com',  // ← Replace with your actual live frontend URL
+    'http://localhost:8080',
+    'https://robertred.blog',
+    'https://www.robertred.blog',
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -34,31 +32,31 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware
-const notifyMiddleware    = require('./middleware/notifyMiddleware');
+const notifyMiddleware = require('./middleware/notifyMiddleware');
 const notificationsRoutes = require('./routes/notifications');
 
 app.use(notifyMiddleware);
 
 // Routes
-const authRoutes        = require('./routes/auth');
-const trendingRoutes    = require('./routes/trending');
-const usersRoutes       = require('./routes/user');
-const projectsRoutes    = require('./routes/projects');
-const findingsRoutes    = require('./routes/findings');
-const halloffameRoutes  = require('./routes/halloffame');
+const authRoutes = require('./routes/auth');
+const trendingRoutes = require('./routes/trending');
+const usersRoutes = require('./routes/user');
+const projectsRoutes = require('./routes/projects');
+const findingsRoutes = require('./routes/findings');
+const halloffameRoutes = require('./routes/halloffame');
 
 // API routes
-app.use('/api/auth',          authRoutes);
-app.use('/api/trending',      trendingRoutes);
-app.use('/api/users',         usersRoutes);
-app.use('/api/projects',      projectsRoutes);
-app.use('/api/findings',      findingsRoutes);
-app.use('/api/wof',           halloffameRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/trending', trendingRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/findings', findingsRoutes);
+app.use('/api/wof', halloffameRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Backend is running!',
     endpoints: {
       hallOfFame: '/api/wof',

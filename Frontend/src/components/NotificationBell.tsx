@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, CheckCheck, Search, FolderOpen, User } from 'lucide-react';
 import { NOTIFY_EVENT } from '@/utils/notifyRefresh';
+import { API } from '@/utils/api';
 
-const API = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '')
-         || 'http://localhost:5000/api';
 
 type Notification = {
   id: number;

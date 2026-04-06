@@ -2,8 +2,8 @@ import { toast } from 'sonner';
 import { generateTechnicalReport, generateManagementReport, generateRetestReport } from '@/utils/reportGenerator';
 import { authHeaders } from './useProjectData';
 import type { Project, Finding, Assignee } from '@/utils/projectTypes';
+import { API as API_BASE } from '@/utils/api';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 const buildReportProject = (p: Project) => ({
   id: p.id, name: p.name, description: '', client: p.client,

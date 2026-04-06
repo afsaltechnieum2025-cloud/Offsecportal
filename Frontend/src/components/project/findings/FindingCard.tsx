@@ -12,8 +12,7 @@ import {
 } from '@/utils/severityHelpers';
 import { authHeaders, authHeadersNoContent, STATIC_BASE } from '@/hooks/useProjectData';
 import type { Finding, FindingPoc, FindingType, RetestStatus } from '@/utils/projectTypes';
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
+import { API as API_BASE } from '@/utils/api';
 
 // Re-export getRetestBadge from here for convenience — it's defined in severityHelpers
 export { getRetestBadge };

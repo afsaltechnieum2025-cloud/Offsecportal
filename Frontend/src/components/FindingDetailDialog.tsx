@@ -23,8 +23,8 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+import { API as API_BASE, STATIC_BASE } from '@/utils/api';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 type Finding = {
   id: string;
@@ -157,8 +157,7 @@ export default function FindingDetailDialog({
   };
 
   const getPocImageUrl = (filePath: string) => {
-    // filePath is stored as /uploads/pocs/filename.png
-    return `http://localhost:8080${filePath}`;
+    return `${STATIC_BASE}${filePath.replace(/^\//, '')}`;
   };
 
   const getSeverityBadge = (severity: string) => {

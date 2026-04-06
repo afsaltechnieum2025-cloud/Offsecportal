@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Project, Finding, FindingPoc, Assignee, ChecklistRow, CLType } from '@/utils/projectTypes';
+import { API as API_BASE, STATIC_BASE } from '@/utils/api';
+export { STATIC_BASE };
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
-
-// Trailing slash is required — file_path is stored as "uploads/logo.png"
-// so the final URL must be "http://localhost:5000/uploads/logo.png"
-export const STATIC_BASE = API_BASE.replace(/\/api\/?$/, '') + '/';
 
 export const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem('token');

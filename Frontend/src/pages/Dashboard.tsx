@@ -32,6 +32,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { API as API_BASE, STATIC_BASE } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,9 +70,6 @@ interface TeamMember {
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
-const STATIC_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'http://localhost:5000';
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem('token') ?? '';

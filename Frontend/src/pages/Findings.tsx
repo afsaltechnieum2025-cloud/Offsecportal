@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { API as API_BASE } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,9 +87,6 @@ interface Assignee {
   user_id: string;
   username: string;
 }
-
-// ─── API base URL ─────────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

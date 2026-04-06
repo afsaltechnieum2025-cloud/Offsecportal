@@ -49,8 +49,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { UserProfileDialog } from '@/components/UserProfileDialog';
 import { triggerNotifyRefresh } from '@/utils/notifyRefresh';
+import { API } from '@/utils/api';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 type AppRole = 'admin' | 'manager' | 'tester' | 'client';
 

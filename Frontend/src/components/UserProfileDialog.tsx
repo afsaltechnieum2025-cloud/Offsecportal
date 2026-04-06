@@ -16,8 +16,8 @@ import {
     Document, Packer, Paragraph, TextRun,
     Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType
 } from 'docx';
+import { API } from '@/utils/api';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 interface UserProfile {
@@ -142,17 +142,23 @@ export function UserProfileDialog({
     }, [open, userId]);
 
     const fetchUserProfile = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(`${API}/users/${userId}/profile`);
-            if (!res.ok) throw new Error();
-            setProfile(await res.json());
-        } catch {
-            toast.error('Failed to load user profile');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    setIsLoading(true);
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API}/users/${userId}/profile`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            }
+        });
+        if (!res.ok) throw new Error();
+        setProfile(await res.json());
+    } catch {
+        toast.error('Failed to load user profile');
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     /* ── Word document ───────────────────────────────────────────────────── */
     const generateWordDocument = async () => {

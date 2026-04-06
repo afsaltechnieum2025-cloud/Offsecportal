@@ -19,6 +19,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
 } from '@/components/ui/dialog';
+import { API } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,6 @@ interface LeaderboardEntry {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const HOF_API = `${API}/wof`;
 
 const SEVERITY_CONFIG: Record<string, { label: string; cls: string }> = {

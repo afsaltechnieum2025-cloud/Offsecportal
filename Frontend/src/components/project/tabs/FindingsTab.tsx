@@ -13,8 +13,8 @@ import FindingCard from '../findings/FindingCard';
 import AddFindingDialog from '../findings/AddFindingDialog';
 import DeleteConfirmDialog from '../shared/DeleteConfirmDialog';
 import type { Finding, FindingPoc, FindingType, RetestStatus, Severity } from '@/utils/projectTypes';
+import { API as API_BASE } from '@/utils/api';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 // ─── TOIP Test Case types ─────────────────────────────────────────────────────
 

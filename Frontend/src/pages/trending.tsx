@@ -19,10 +19,8 @@ import {
   Search, Plus, ExternalLink, ImageIcon, X, FileText, Pencil, Trash2,
   Cloud, Shield, Brain, Network, Globe, Cpu, Layers, Bot, Package,
 } from 'lucide-react';
+import { API } from '@/utils/api';
 
-const API = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/trending`
-  : 'http://localhost:5000/api/trending';
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 

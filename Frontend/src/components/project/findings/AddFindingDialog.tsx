@@ -15,8 +15,8 @@ import {
 import { findingTypeConfig } from '@/utils/severityHelpers';
 import { authHeaders, authHeadersNoContent } from '@/hooks/useProjectData';
 import type { Finding, FindingPoc, FindingType, Severity } from '@/utils/projectTypes';
+import { API as API_BASE } from '@/utils/api';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 type FormData = {
   severity: Severity | ''; title: string; description: string;

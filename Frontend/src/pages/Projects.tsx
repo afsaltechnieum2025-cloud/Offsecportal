@@ -60,6 +60,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { API as API_BASE } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,7 +104,6 @@ type Assignee = {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem('token') ?? '';
