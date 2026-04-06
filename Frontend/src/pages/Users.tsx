@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,7 +102,7 @@ const capitalizeRole = (role: AppRole | null): string => {
 };
 
 export default function Users() {
-  const { role } = useAuth();
+  const { role, token } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,14 +140,23 @@ export default function Users() {
   const [selectedUserForProfile, setSelectedUserForProfile] = useState<UserWithRole | null>(null);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
-  if (role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (role !== 'admin' && role !== 'manager') return <Navigate to="/dashboard" replace />;
+
+  // ── Shared auth headers helper ────────────────────────────────────────────
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  });
 
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API}/users`);
+      const res = await fetch(`${API}/users`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Unauthorized');
       const data = await res.json();
       setUsers(data);
     } catch {
@@ -171,11 +179,10 @@ export default function Users() {
     if (!open) resetCreateDialog();
   };
 
-  // ── Live validation on field change ─────────────────────────────────────
+  // ── Live validation on field change ──────────────────────────────────────
   const handleFieldChange = (field: keyof typeof newUser, value: string) => {
     const updated = { ...newUser, [field]: value };
     setNewUser(updated);
-    // Only re-validate if form was already submitted once
     if (Object.keys(touched).length > 0) {
       setFormErrors(validateForm(updated));
     }
@@ -186,9 +193,8 @@ export default function Users() {
     setFormErrors(validateForm(newUser));
   };
 
-  // ── Submit ───────────────────────────────────────────────────────────────
+  // ── Create user ──────────────────────────────────────────────────────────
   const handleCreateUser = async () => {
-    // Mark all fields as touched so errors show
     setTouched({ name: true, full_name: true, email: true, password: true });
     const errors = validateForm(newUser);
     setFormErrors(errors);
@@ -198,7 +204,7 @@ export default function Users() {
     try {
       const res = await fetch(`${API}/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(newUser),
       });
       const data = await res.json();
@@ -227,7 +233,7 @@ export default function Users() {
     try {
       const res = await fetch(`${API}/users/${selectedUser.id}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) throw new Error();
@@ -247,7 +253,11 @@ export default function Users() {
     if (!userToDelete) return;
     setIsDeleting(true);
     try {
-      await fetch(`${API}/users/${userToDelete.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/users/${userToDelete.id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error();
       toast.success('User deleted successfully!');
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
@@ -272,8 +282,8 @@ export default function Users() {
     setIsLoadingProjects(true);
     try {
       const [projectsRes, assignmentsRes] = await Promise.all([
-        fetch(`${API}/projects`),
-        fetch(`${API}/users/${user.id}/projects`),
+        fetch(`${API}/projects`, { headers: authHeaders() }),
+        fetch(`${API}/users/${user.id}/projects`, { headers: authHeaders() }),
       ]);
       setAllProjects(await projectsRes.json());
       setUserAssignments(await assignmentsRes.json());
@@ -289,14 +299,17 @@ export default function Users() {
     setIsSavingAssignments(true);
     try {
       if (isAssigned) {
-        await fetch(`${API}/users/${selectedUserForProjects.id}/projects/${projectId}`, { method: 'DELETE' });
+        await fetch(`${API}/users/${selectedUserForProjects.id}/projects/${projectId}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
         setUserAssignments(prev => prev.filter(a => a.project_id !== projectId));
         toast.success('Project unassigned');
         triggerNotifyRefresh();
       } else {
         const res = await fetch(`${API}/users/${selectedUserForProjects.id}/projects`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ project_id: projectId }),
         });
         const data = await res.json();
@@ -465,6 +478,7 @@ export default function Users() {
                     placeholder="Enter username"
                     value={newUser.name}
                     onChange={(e) => handleFieldChange('name', e.target.value)}
+                    onBlur={() => handleFieldBlur('name')}
                     autoComplete="off"
                     className={formErrors.name && touched.name ? 'border-destructive focus-visible:ring-destructive' : ''}
                   />
@@ -483,6 +497,7 @@ export default function Users() {
                     placeholder="Enter full name"
                     value={newUser.full_name}
                     onChange={(e) => handleFieldChange('full_name', e.target.value)}
+                    onBlur={() => handleFieldBlur('full_name')}
                     className={formErrors.full_name && touched.full_name ? 'border-destructive focus-visible:ring-destructive' : ''}
                   />
                   {formErrors.full_name && touched.full_name && (
@@ -502,6 +517,7 @@ export default function Users() {
                     autoComplete="new-password"
                     value={newUser.email}
                     onChange={(e) => handleFieldChange('email', e.target.value)}
+                    onBlur={() => handleFieldBlur('email')}
                     className={formErrors.email && touched.email ? 'border-destructive focus-visible:ring-destructive' : ''}
                   />
                   {formErrors.email && touched.email && (
@@ -509,7 +525,7 @@ export default function Users() {
                   )}
                 </div>
 
-                {/* Password with eye toggle */}
+                {/* Password */}
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1 mb-2">
                     <Star className="h-3 w-3" />
@@ -522,6 +538,7 @@ export default function Users() {
                       value={newUser.password}
                       autoComplete="new-password"
                       onChange={(e) => handleFieldChange('password', e.target.value)}
+                      onBlur={() => handleFieldBlur('password')}
                       className={`pr-10 ${formErrors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     />
                     <button
@@ -530,16 +547,12 @@ export default function Users() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
                     >
-                      {showPassword
-                        ? <EyeOff className="h-4 w-4" />
-                        : <Eye className="h-4 w-4" />
-                      }
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {formErrors.password && touched.password ? (
                     <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
                   ) : (
-                    /* Hint shown while field is empty / untouched */
                     !newUser.password && (
                       <p className="text-xs text-muted-foreground mt-1">Must be at least 8 characters.</p>
                     )
@@ -585,7 +598,7 @@ export default function Users() {
               key={member.id}
               glow
               className="animate-fade-in cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg group"
-              onClick={(e) => member.role !== 'client' && openUserProfile(member, { stopPropagation: () => { } } as React.MouseEvent)}
+              onClick={(e) => member.role !== 'client' && openUserProfile(member, { stopPropagation: () => {} } as React.MouseEvent)}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <CardContent className="p-4">

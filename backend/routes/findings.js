@@ -3,8 +3,9 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 const multer  = require('multer');
+const jwt     = require('jsonwebtoken');
 
-// ─── Multer setup — store in memory, not disk ───────────────
+// ─── Multer setup — store in memory, not disk ────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -16,10 +17,45 @@ const upload = multer({
   },
 });
 
+// ─── Auth middleware ─────────────────────────────────────────────────────────
+
+/** Any authenticated user (admin, manager, tester) */
+const requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+  }
+};
+
+/** Admin or manager only */
+const requireAdminOrManager = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    if (!['admin', 'manager'].includes(decoded.role)) {
+      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+    }
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+  }
+};
+
 // ─────────────────────────────────────────────────────────────
 //  GET /api/findings?project_id=<uuid>
 // ─────────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { project_id } = req.query;
   if (!project_id) {
     return res.status(400).json({ message: 'project_id query param is required' });
@@ -45,9 +81,9 @@ router.get('/', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  POST /api/findings
+//  POST /api/findings  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const {
     project_id,
     title,
@@ -107,16 +143,22 @@ router.post('/', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/findings/:id/pocs  ← returns base64 data URLs
+//  GET /api/findings/pocs/batch?finding_ids=id1,id2,id3
+//  NOTE: must be declared BEFORE /:id routes to avoid conflict
 // ─────────────────────────────────────────────────────────────
-router.get('/:id/pocs', async (req, res) => {
+router.get('/pocs/batch', requireAuth, async (req, res) => {
+  const { finding_ids } = req.query;
+  if (!finding_ids) {
+    return res.status(400).json({ message: 'finding_ids query param is required' });
+  }
+  const ids          = finding_ids.split(',');
+  const placeholders = ids.map(() => '?').join(',');
   try {
     const [rows] = await db.query(
-      'SELECT id, finding_id, file_name, mime_type, uploaded_by, uploaded_at, image_data FROM finding_pocs WHERE finding_id = ? ORDER BY uploaded_at ASC',
-      [req.params.id]
+      `SELECT id, finding_id, file_name, mime_type, uploaded_by, uploaded_at, image_data
+       FROM finding_pocs WHERE finding_id IN (${placeholders}) ORDER BY uploaded_at ASC`,
+      ids
     );
-
-    // Convert binary image_data to base64 data URL
     const pocs = rows.map(row => {
       const mimeType = row.mime_type || 'image/jpeg';
       const base64   = row.image_data ? row.image_data.toString('base64') : null;
@@ -127,76 +169,20 @@ router.get('/:id/pocs', async (req, res) => {
         mime_type:   mimeType,
         uploaded_by: row.uploaded_by,
         uploaded_at: row.uploaded_at,
-        // Frontend uses this directly as <img src=...>
         file_path:   base64 ? `data:${mimeType};base64,${base64}` : null,
       };
     });
-
     res.json(pocs);
   } catch (err) {
-    console.error('GET /api/findings/:id/pocs error:', err);
+    console.error('GET /api/findings/pocs/batch error:', err);
     res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to fetch POCs' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
-//  POST /api/findings/:id/pocs — stores image in DB
-// ─────────────────────────────────────────────────────────────
-router.post('/:id/pocs', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-
-  const { uploaded_by = null } = req.body;
-  const imageBuffer = req.file.buffer;
-  const mimeType    = req.file.mimetype;
-  const fileName    = req.file.originalname;
-
-  try {
-    const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
-    await db.query(
-      `INSERT INTO finding_pocs (id, finding_id, file_path, file_name, mime_type, image_data, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [newId, req.params.id, '', fileName, mimeType, imageBuffer, uploaded_by]
-    );
-
-    // Return base64 data URL so frontend can use it immediately
-    const base64 = imageBuffer.toString('base64');
-    res.status(201).json({
-      id:          newId,
-      finding_id:  req.params.id,
-      file_name:   fileName,
-      mime_type:   mimeType,
-      uploaded_by: uploaded_by,
-      uploaded_at: new Date().toISOString(),
-      file_path:   `data:${mimeType};base64,${base64}`,
-    });
-  } catch (err) {
-    console.error('POST /api/findings/:id/pocs error:', err);
-    res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to save POC' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
-//  DELETE /api/findings/:id/pocs/:pocId
-// ─────────────────────────────────────────────────────────────
-router.delete('/:id/pocs/:pocId', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id FROM finding_pocs WHERE id = ? AND finding_id = ?',
-      [req.params.pocId, req.params.id]
-    );
-    if (rows.length === 0) return res.status(404).json({ message: 'POC not found' });
-    await db.query('DELETE FROM finding_pocs WHERE id = ?', [req.params.pocId]);
-    res.json({ message: 'POC deleted successfully' });
-  } catch (err) {
-    console.error('DELETE /api/findings/:id/pocs/:pocId error:', err);
-    res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to delete POC' });
   }
 });
 
 // ─────────────────────────────────────────────────────────────
 //  GET /api/findings/:id
 // ─────────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM findings WHERE id = ?', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ message: 'Finding not found' });
@@ -208,9 +194,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  PATCH /api/findings/:id
+//  PATCH /api/findings/:id  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth, async (req, res) => {
   const allowed = [
     'title', 'description', 'severity', 'cvss_score', 'status',
     'steps_to_reproduce', 'impact', 'remediation', 'affected_component',
@@ -243,9 +229,20 @@ router.patch('/:id', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 //  DELETE /api/findings/:id
+//  Users can only delete their own; admins/managers can delete any
 // ─────────────────────────────────────────────────────────────
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    const [rows] = await db.query('SELECT created_by FROM findings WHERE id = ?', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Finding not found' });
+
+    const isAdminOrManager = ['admin', 'manager'].includes(req.user.role);
+    const isOwner          = String(rows[0].created_by) === String(req.user.id);
+
+    if (!isAdminOrManager && !isOwner) {
+      return res.status(403).json({ message: 'Forbidden: You can only delete your own findings' });
+    }
+
     const [result] = await db.query('DELETE FROM findings WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Finding not found' });
     res.json({ message: 'Finding deleted successfully' });
@@ -256,20 +253,13 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/findings/pocs/batch?finding_ids=id1,id2,id3
+//  GET /api/findings/:id/pocs
 // ─────────────────────────────────────────────────────────────
-router.get('/pocs/batch', async (req, res) => {
-  const { finding_ids } = req.query;
-  if (!finding_ids) {
-    return res.status(400).json({ message: 'finding_ids query param is required' });
-  }
-  const ids          = finding_ids.split(',');
-  const placeholders = ids.map(() => '?').join(',');
+router.get('/:id/pocs', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, finding_id, file_name, mime_type, uploaded_by, uploaded_at, image_data
-       FROM finding_pocs WHERE finding_id IN (${placeholders}) ORDER BY uploaded_at ASC`,
-      ids
+      'SELECT id, finding_id, file_name, mime_type, uploaded_by, uploaded_at, image_data FROM finding_pocs WHERE finding_id = ? ORDER BY uploaded_at ASC',
+      [req.params.id]
     );
     const pocs = rows.map(row => {
       const mimeType = row.mime_type || 'image/jpeg';
@@ -286,8 +276,69 @@ router.get('/pocs/batch', async (req, res) => {
     });
     res.json(pocs);
   } catch (err) {
-    console.error('GET /api/findings/pocs/batch error:', err);
+    console.error('GET /api/findings/:id/pocs error:', err);
     res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to fetch POCs' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  POST /api/findings/:id/pocs
+// ─────────────────────────────────────────────────────────────
+router.post('/:id/pocs', requireAuth, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+  const { uploaded_by = null } = req.body;
+  const imageBuffer = req.file.buffer;
+  const mimeType    = req.file.mimetype;
+  const fileName    = req.file.originalname;
+
+  try {
+    const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
+    await db.query(
+      `INSERT INTO finding_pocs (id, finding_id, file_path, file_name, mime_type, image_data, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [newId, req.params.id, '', fileName, mimeType, imageBuffer, uploaded_by]
+    );
+    const base64 = imageBuffer.toString('base64');
+    res.status(201).json({
+      id:          newId,
+      finding_id:  req.params.id,
+      file_name:   fileName,
+      mime_type:   mimeType,
+      uploaded_by: uploaded_by,
+      uploaded_at: new Date().toISOString(),
+      file_path:   `data:${mimeType};base64,${base64}`,
+    });
+  } catch (err) {
+    console.error('POST /api/findings/:id/pocs error:', err);
+    res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to save POC' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  DELETE /api/findings/:id/pocs/:pocId
+//  Users can only delete their own POCs; admins/managers can delete any
+// ─────────────────────────────────────────────────────────────
+router.delete('/:id/pocs/:pocId', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, uploaded_by FROM finding_pocs WHERE id = ? AND finding_id = ?',
+      [req.params.pocId, req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ message: 'POC not found' });
+
+    const isAdminOrManager = ['admin', 'manager'].includes(req.user.role);
+    const isOwner          = String(rows[0].uploaded_by) === String(req.user.id);
+
+    if (!isAdminOrManager && !isOwner) {
+      return res.status(403).json({ message: 'Forbidden: You can only delete your own POCs' });
+    }
+
+    await db.query('DELETE FROM finding_pocs WHERE id = ?', [req.params.pocId]);
+    res.json({ message: 'POC deleted successfully' });
+  } catch (err) {
+    console.error('DELETE /api/findings/:id/pocs/:pocId error:', err);
+    res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to delete POC' });
   }
 });
 

@@ -1,8 +1,62 @@
 // routes/projects.js
 const express = require('express');
-const router = express.Router();
-const db = require('../db');
+const router  = express.Router();
+const db      = require('../db');
+const jwt     = require('jsonwebtoken');
 const { sendProjectAssignmentEmail } = require('../utils/emailService');
+
+// ─── Auth middleware ─────────────────────────────────────────────────────────
+
+/** Any authenticated user */
+const requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+  }
+};
+
+/** Admin or manager only */
+const requireAdminOrManager = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    if (!['admin', 'manager'].includes(decoded.role)) {
+      return res.status(403).json({ message: 'Forbidden: Admin or Manager access required' });
+    }
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+  }
+};
+
+/** Admin only */
+const requireAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden: Admin access required' });
+    }
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+  }
+};
 
 // ─────────────────────────────────────────────────────────────
 //  HELPER: Auto-generate next project code (e.g. TOP004)
@@ -13,82 +67,52 @@ async function generateProjectCode() {
      WHERE project_code LIKE 'TOP%'
      ORDER BY new_id DESC LIMIT 1`
   );
-
   if (!rows.length) return 'TOP001';
-
   const last = rows[0].project_code;
   const num  = parseInt(last.replace('TOP', ''), 10);
   return `TOP${String(num + 1).padStart(3, '0')}`;
 }
 
 // ─────────────────────────────────────────────────────────────
-//  HELPER: Fetch assignedTesters (array of user_id strings)
-//  for one or more project IDs
+//  HELPER: Fetch assignedTesters for one or more project IDs
 // ─────────────────────────────────────────────────────────────
 async function fetchAssignedTesters(projectIds) {
   if (!projectIds.length) return {};
-
   const placeholders = projectIds.map(() => '?').join(',');
   const [rows] = await db.query(
-    `SELECT project_id, user_id
-     FROM project_assignments
-     WHERE project_id IN (${placeholders})`,
+    `SELECT project_id, user_id FROM project_assignments WHERE project_id IN (${placeholders})`,
     projectIds
   );
-
-  // Build a map: { project_id -> [user_id, user_id, ...] }
   const map = {};
   projectIds.forEach(id => { map[id] = []; });
-  rows.forEach(r => {
-    if (map[r.project_id]) {
-      map[r.project_id].push(String(r.user_id));
-    }
-  });
-
+  rows.forEach(r => { if (map[r.project_id]) map[r.project_id].push(String(r.user_id)); });
   return map;
 }
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/projects/test-email
+//  GET /api/projects/test-email  (admin only)
 // ─────────────────────────────────────────────────────────────
-router.get('/test-email', async (req, res) => {
+router.get('/test-email', requireAdmin, async (req, res) => {
   const { user_id, project_id } = req.query;
-
   if (!user_id || !project_id) {
     return res.status(400).json({
       message: 'Both user_id and project_id query params are required',
-      example: '/api/projects/test-email?user_id=26&project_id=b5a5531d-2919-11f1-a69b-c035323b6760',
+      example: '/api/projects/test-email?user_id=26&project_id=b5a5531d-...',
     });
   }
-
   try {
     const [[project]] = await db.query(
-      `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`,
-      [project_id]
+      `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`, [project_id]
     );
-    if (!project) {
-      return res.status(404).json({ message: `Project not found for id: ${project_id}` });
-    }
+    if (!project) return res.status(404).json({ message: `Project not found for id: ${project_id}` });
 
     const [[user]] = await db.query(
-      `SELECT id, name, full_name, email FROM users WHERE id = ?`,
-      [user_id]
+      `SELECT id, name, full_name, email FROM users WHERE id = ?`, [user_id]
     );
-    if (!user) {
-      return res.status(404).json({ message: `User not found for id: ${user_id}` });
-    }
+    if (!user) return res.status(404).json({ message: `User not found for id: ${user_id}` });
 
     const toName  = user.full_name || user.name;
     const toEmail = user.email;
-
-    console.log('[TEST EMAIL] Sending with data:', {
-      toEmail, toName,
-      projectName: project.name,
-      clientName:  project.client,
-      startDate:   project.start_date,
-      endDate:     project.end_date,
-      projectId:   project.id,
-    });
 
     const result = await sendProjectAssignmentEmail({
       toEmail, toName,
@@ -104,12 +128,6 @@ router.get('/test-email', async (req, res) => {
       success: true,
       message: `Test email sent successfully to ${toEmail}`,
       resend_id: result.id,
-      sent_data: {
-        to: toEmail, name: toName,
-        project: project.name, client: project.client,
-        start_date: project.start_date, end_date: project.end_date,
-        project_id: project.id,
-      },
     });
   } catch (err) {
     console.error('[TEST EMAIL] Failed:', err.message);
@@ -118,10 +136,9 @@ router.get('/test-email', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/projects
-//  Now includes assignedTesters: ["29", "31", ...]
+//  GET /api/projects  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -141,9 +158,8 @@ router.get('/', async (req, res) => {
       ORDER BY p.created_at DESC
     `);
 
-    // ── Fetch assignedTesters for all projects in one query ──
-    const projectIds    = rows.map(r => r.id);
-    const testersMap    = await fetchAssignedTesters(projectIds);
+    const projectIds = rows.map(r => r.id);
+    const testersMap = await fetchAssignedTesters(projectIds);
 
     res.json(rows.map(row => ({
       ...row,
@@ -157,7 +173,7 @@ router.get('/', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
-      assignedTesters: testersMap[row.id] ?? [],   // ← NEW: ["29", "31", ...]
+      assignedTesters: testersMap[row.id] ?? [],
     })));
   } catch (err) {
     console.error('GET /api/projects error:', err);
@@ -166,10 +182,9 @@ router.get('/', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/projects/:id
-//  Also includes assignedTesters
+//  GET /api/projects/:id  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -206,7 +221,7 @@ router.get('/:id', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
-      assignedTesters: testersMap[row.id] ?? [],   // ← NEW
+      assignedTesters: testersMap[row.id] ?? [],
     });
   } catch (err) {
     console.error('GET /api/projects/:id error:', err);
@@ -215,9 +230,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  POST /api/projects
+//  POST /api/projects  (admin or manager only)
 // ─────────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', requireAdminOrManager, async (req, res) => {
   const {
     name, client, description = null, domain,
     ip_addresses = null, start_date = null, end_date = null,
@@ -230,7 +245,6 @@ router.post('/', async (req, res) => {
 
   try {
     const projectCode = await generateProjectCode();
-
     const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
     await db.query(
       `INSERT INTO projects (id, name, project_code, client, description, domain, ip_addresses, start_date, end_date, created_by, status)
@@ -239,15 +253,13 @@ router.post('/', async (req, res) => {
         ip_addresses ? JSON.stringify(ip_addresses) : null,
         start_date || null, end_date || null, created_by || null, status]
     );
-
     const [rows] = await db.query('SELECT * FROM projects WHERE id = ?', [newId]);
     res.status(201).json({
       ...rows[0],
       ip_addresses: rows[0].ip_addresses ? JSON.parse(rows[0].ip_addresses) : null,
       findings_count: 0, critical_count: 0, high_count: 0,
       medium_count: 0, low_count: 0, info_count: 0,
-      assignees_count: 0,
-      assignedTesters: [],   // ← NEW: empty on creation
+      assignees_count: 0, assignedTesters: [],
     });
   } catch (err) {
     console.error('POST /api/projects error:', err);
@@ -256,16 +268,12 @@ router.post('/', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  PATCH /api/projects/:id
+//  PATCH /api/projects/:id  (admin or manager only)
 // ─────────────────────────────────────────────────────────────
-router.patch('/:id', async (req, res) => {
-  const { id } = req.params;
+router.patch('/:id', requireAdminOrManager, async (req, res) => {
+  const { id }  = req.params;
   const fields  = req.body;
-
-  const allowed = [
-    'name', 'client', 'description', 'domain',
-    'ip_addresses', 'status', 'start_date', 'end_date',
-  ];
+  const allowed = ['name', 'client', 'description', 'domain', 'ip_addresses', 'status', 'start_date', 'end_date'];
 
   const keys = Object.keys(fields).filter(k => allowed.includes(k));
   const values = keys.map(k => {
@@ -278,38 +286,29 @@ router.patch('/:id', async (req, res) => {
   }
 
   const setClauses = keys.map(k => `${k} = ?`).join(', ');
-
   try {
     const [result] = await db.query(
-      `UPDATE projects SET ${setClauses} WHERE id = ?`,
-      [...values, id]
+      `UPDATE projects SET ${setClauses} WHERE id = ?`, [...values, id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Project not found' });
 
     const [rows] = await db.query(`
-      SELECT
-        p.*,
-        COUNT(DISTINCT f.id)                                                         AS findings_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'critical' THEN f.id END)       AS critical_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'high'     THEN f.id END)       AS high_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'medium'   THEN f.id END)       AS medium_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'low'      THEN f.id END)       AS low_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'info'
-                              OR LOWER(f.severity) = 'informational' THEN f.id END)  AS info_count,
-        COUNT(DISTINCT pa.id)                                                         AS assignees_count
+      SELECT p.*,
+        COUNT(DISTINCT f.id) AS findings_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'critical' THEN f.id END) AS critical_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'high'     THEN f.id END) AS high_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'medium'   THEN f.id END) AS medium_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'low'      THEN f.id END) AS low_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'info' OR LOWER(f.severity) = 'informational' THEN f.id END) AS info_count,
+        COUNT(DISTINCT pa.id) AS assignees_count
       FROM projects p
-      LEFT JOIN findings            f  ON f.project_id  = p.id
+      LEFT JOIN findings f ON f.project_id = p.id
       LEFT JOIN project_assignments pa ON pa.project_id = p.id
-      WHERE p.id = ?
-      GROUP BY p.id
+      WHERE p.id = ? GROUP BY p.id
     `, [id]);
 
     const row        = rows[0];
     const testersMap = await fetchAssignedTesters([row.id]);
-
     res.json({
       ...row,
       ip_addresses: row.ip_addresses
@@ -322,7 +321,7 @@ router.patch('/:id', async (req, res) => {
       low_count:       Number(row.low_count),
       info_count:      Number(row.info_count),
       assignees_count: Number(row.assignees_count),
-      assignedTesters: testersMap[row.id] ?? [],   // ← NEW
+      assignedTesters: testersMap[row.id] ?? [],
     });
   } catch (err) {
     console.error('PATCH /api/projects/:id error:', err);
@@ -331,9 +330,9 @@ router.patch('/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  DELETE /api/projects/:id
+//  DELETE /api/projects/:id  (admin only)
 // ─────────────────────────────────────────────────────────────
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const [result] = await db.query('DELETE FROM projects WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Project not found' });
@@ -345,25 +344,21 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/projects/:id/assignments
+//  GET /api/projects/:id/assignments  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.get('/:id/assignments', async (req, res) => {
+router.get('/:id/assignments', requireAuth, async (req, res) => {
   try {
     const [assignments] = await db.query(
       `SELECT pa.id, pa.user_id, pa.assigned_at
-       FROM project_assignments pa
-       WHERE pa.project_id = ?
-       ORDER BY pa.assigned_at ASC`,
+       FROM project_assignments pa WHERE pa.project_id = ? ORDER BY pa.assigned_at ASC`,
       [req.params.id]
     );
-
     if (assignments.length === 0) return res.json([]);
 
     const userIds      = assignments.map(a => a.user_id);
     const placeholders = userIds.map(() => '?').join(',');
     const [users]      = await db.query(
-      `SELECT id, name, full_name, email, role FROM users WHERE id IN (${placeholders})`,
-      userIds
+      `SELECT id, name, full_name, email, role FROM users WHERE id IN (${placeholders})`, userIds
     );
 
     const userMap = {};
@@ -371,12 +366,10 @@ router.get('/:id/assignments', async (req, res) => {
       userMap[String(u.id)] = u.full_name || u.name || u.email || String(u.id);
     });
 
-    const result = assignments.map(a => ({
+    res.json(assignments.map(a => ({
       ...a,
       username: userMap[String(a.user_id)] || String(a.user_id),
-    }));
-
-    res.json(result);
+    })));
   } catch (err) {
     console.error('GET /api/projects/:id/assignments error:', err);
     res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to fetch assignments' });
@@ -384,12 +377,10 @@ router.get('/:id/assignments', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  POST /api/projects/:id/assignments
-//  Assigns a tester and sends email notification
+//  POST /api/projects/:id/assignments  (admin or manager only)
 // ─────────────────────────────────────────────────────────────
-router.post('/:id/assignments', async (req, res) => {
+router.post('/:id/assignments', requireAdminOrManager, async (req, res) => {
   const { user_id, assigned_by_id } = req.body;
-
   if (!user_id) return res.status(400).json({ message: 'user_id is required' });
 
   try {
@@ -399,35 +390,25 @@ router.post('/:id/assignments', async (req, res) => {
       [newId, req.params.id, user_id]
     );
 
-    // ── EMAIL NOTIFICATION ────────────────────────────────────
+    // ── Email notification ────────────────────────────────────
     try {
       const [[project]] = await db.query(
-        `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`,
-        [req.params.id]
+        `SELECT id, name, client, start_date, end_date FROM projects WHERE id = ?`, [req.params.id]
       );
-
       const [[assignee]] = await db.query(
-        `SELECT id, name, full_name, email FROM users WHERE id = ?`,
-        [user_id]
+        `SELECT id, name, full_name, email FROM users WHERE id = ?`, [user_id]
       );
-
       let assignerName = 'Technieum Management';
       if (assigned_by_id) {
         const [[assigner]] = await db.query(
-          `SELECT name, full_name FROM users WHERE id = ?`,
-          [assigned_by_id]
+          `SELECT name, full_name FROM users WHERE id = ?`, [assigned_by_id]
         );
         if (assigner) assignerName = assigner.full_name || assigner.name;
       }
-
       if (project && assignee && assignee.email) {
-        const toName  = assignee.full_name || assignee.name;
-        const toEmail = assignee.email;
-
-        console.log(`[Email] Triggering assignment email → ${toEmail} (${toName}) for project "${project.name}" by "${assignerName}"`);
-
         sendProjectAssignmentEmail({
-          toEmail, toName,
+          toEmail: assignee.email,
+          toName:  assignee.full_name || assignee.name,
           projectName: project.name,
           clientName:  project.client,
           startDate:   project.start_date,
@@ -435,8 +416,6 @@ router.post('/:id/assignments', async (req, res) => {
           assignedBy:  assignerName,
           projectId:   project.id,
         }).catch(e => console.error('[Email] Assignment notification failed:', e.message));
-      } else {
-        console.warn('[Email] Skipped — missing project, assignee, or email address', { project, assignee });
       }
     } catch (emailErr) {
       console.error('[Email] Lookup failed:', emailErr.message);
@@ -454,9 +433,9 @@ router.post('/:id/assignments', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  DELETE /api/projects/:id/assignments/:userId
+//  DELETE /api/projects/:id/assignments/:userId  (admin or manager)
 // ─────────────────────────────────────────────────────────────
-router.delete('/:id/assignments/:userId', async (req, res) => {
+router.delete('/:id/assignments/:userId', requireAdminOrManager, async (req, res) => {
   try {
     const [result] = await db.query(
       'DELETE FROM project_assignments WHERE project_id = ? AND user_id = ?',
@@ -471,9 +450,9 @@ router.delete('/:id/assignments/:userId', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  GET /api/projects/:id/checklist
+//  GET /api/projects/:id/checklist  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.get('/:id/checklist', async (req, res) => {
+router.get('/:id/checklist', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT * FROM project_checklists WHERE project_id = ? ORDER BY checklist_type, category, item_key`,
@@ -487,18 +466,15 @@ router.get('/:id/checklist', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  POST /api/projects/:id/checklist  — upsert a single item
+//  POST /api/projects/:id/checklist  (any authenticated user)
 // ─────────────────────────────────────────────────────────────
-router.post('/:id/checklist', async (req, res) => {
+router.post('/:id/checklist', requireAuth, async (req, res) => {
   const { checklist_type, category, item_key, is_checked, updated_by } = req.body;
-
   if (!checklist_type || !category || !item_key) {
     return res.status(400).json({ message: 'checklist_type, category, and item_key are required' });
   }
-
   try {
     const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
-
     await db.query(
       `INSERT INTO project_checklists
          (id, project_id, checklist_type, category, item_key, is_checked, updated_by, updated_at)
@@ -509,7 +485,6 @@ router.post('/:id/checklist', async (req, res) => {
          updated_at = NOW()`,
       [newId, req.params.id, checklist_type, category, item_key, is_checked ? 1 : 0, updated_by || null]
     );
-
     res.json({ success: true });
   } catch (err) {
     console.error('POST /projects/:id/checklist error:', err);
