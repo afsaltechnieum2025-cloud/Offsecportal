@@ -164,9 +164,9 @@ export default function Projects() {
 
   // Date picker states
   const [createStartDate, setCreateStartDate] = useState<Date | undefined>(undefined);
-  const [createEndDate, setCreateEndDate]     = useState<Date | undefined>(undefined);
-  const [editStartDate, setEditStartDate]     = useState<Date | undefined>(undefined);
-  const [editEndDate, setEditEndDate]         = useState<Date | undefined>(undefined);
+  const [createEndDate, setCreateEndDate] = useState<Date | undefined>(undefined);
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
+  const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     fetchProjects();
@@ -209,10 +209,10 @@ export default function Projects() {
             if (findingsRes.ok) {
               const findings = await findingsRes.json();
               const criticalCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'critical').length;
-              const highCount     = findings.filter((f: any) => String(f.severity).toLowerCase() === 'high').length;
-              const mediumCount   = findings.filter((f: any) => String(f.severity).toLowerCase() === 'medium').length;
-              const lowCount      = findings.filter((f: any) => String(f.severity).toLowerCase() === 'low').length;
-              const infoCount     = findings.filter((f: any) =>
+              const highCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'high').length;
+              const mediumCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'medium').length;
+              const lowCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'low').length;
+              const infoCount = findings.filter((f: any) =>
                 String(f.severity).toLowerCase() === 'informational' ||
                 String(f.severity).toLowerCase() === 'info'
               ).length;
@@ -228,10 +228,10 @@ export default function Projects() {
                 ...project,
                 findings_count: findings.length,
                 critical_count: criticalCount,
-                high_count:     highCount,
-                medium_count:   mediumCount,
-                low_count:      lowCount,
-                info_count:     infoCount,
+                high_count: highCount,
+                medium_count: mediumCount,
+                low_count: lowCount,
+                info_count: infoCount,
                 assignees_count: assigneesCount,
               };
             }
@@ -260,11 +260,11 @@ export default function Projects() {
       if (!res.ok) return;
       const data = await res.json();
       const normalised: Profile[] = data.map((u: any) => ({
-        id:       u.id,
-        user_id:  u.id,
+        id: u.id,
+        user_id: u.id,
         username: u.username ?? u.name ?? u.email ?? String(u.id),
-        email:    u.email,
-        role:     u.role,
+        email: u.email,
+        role: u.role,
       }));
       setProfiles(normalised);
     } catch (error) {
@@ -309,7 +309,7 @@ export default function Projects() {
       return <Badge className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20">Completed</Badge>;
     }
     const variants: Record<string, 'active' | 'pending' | 'overdue' | 'secondary'> = {
-      active:  'active',
+      active: 'active',
       pending: 'pending',
       overdue: 'overdue',
     };
@@ -350,21 +350,21 @@ export default function Projects() {
       }
 
       const projectData = {
-        name:        newProject.name,
-        client:      newProject.client,
+        name: newProject.name,
+        client: newProject.client,
         description: newProject.description || null,
-        domain:      newProject.domain || null,
+        domain: newProject.domain || null,
         ip_addresses: ipAddresses,
-        start_date:  createStartDate ? createStartDate.toISOString().split('T')[0] : null,
-        end_date:    createEndDate   ? createEndDate.toISOString().split('T')[0]   : null,
-        status:      newProject.status,
-        created_by:  user?.id,
+        start_date: createStartDate ? createStartDate.toISOString().split('T')[0] : null,
+        end_date: createEndDate ? createEndDate.toISOString().split('T')[0] : null,
+        status: newProject.status,
+        created_by: user?.id,
       };
 
       const res = await fetch(`${API_BASE}/projects`, {
-        method:  'POST',
+        method: 'POST',
         headers: authHeaders(),
-        body:    JSON.stringify(projectData),
+        body: JSON.stringify(projectData),
       });
 
       if (!res.ok) {
@@ -388,15 +388,15 @@ export default function Projects() {
 
   const openEditDialog = (project: Project) => {
     setEditProject({
-      id:           project.id,
-      name:         project.name,
-      client:       project.client,
-      description:  project.description || '',
-      domain:       project.domain || '',
+      id: project.id,
+      name: project.name,
+      client: project.client,
+      description: project.description || '',
+      domain: project.domain || '',
       ip_addresses: project.ip_addresses ? project.ip_addresses.join(', ') : '',
-      start_date:   project.start_date || '',
-      end_date:     project.end_date || '',
-      status:       project.status || 'active',
+      start_date: project.start_date || '',
+      end_date: project.end_date || '',
+      status: project.status || 'active',
     });
     setEditStartDate(project.start_date ? new Date(project.start_date) : undefined);
     setEditEndDate(project.end_date ? new Date(project.end_date) : undefined);
@@ -422,20 +422,20 @@ export default function Projects() {
       }
 
       const projectData = {
-        name:         editProject.name,
-        client:       editProject.client,
-        description:  editProject.description || null,
-        domain:       editProject.domain || null,
+        name: editProject.name,
+        client: editProject.client,
+        description: editProject.description || null,
+        domain: editProject.domain || null,
         ip_addresses: ipAddresses,
-        start_date:   editStartDate ? editStartDate.toISOString().split('T')[0] : null,
-        end_date:     editEndDate   ? editEndDate.toISOString().split('T')[0]   : null,
-        status:       editProject.status,
+        start_date: editStartDate ? editStartDate.toISOString().split('T')[0] : null,
+        end_date: editEndDate ? editEndDate.toISOString().split('T')[0] : null,
+        status: editProject.status,
       };
 
       const res = await fetch(`${API_BASE}/projects/${editProject.id}`, {
-        method:  'PATCH',
+        method: 'PATCH',
         headers: authHeaders(),
-        body:    JSON.stringify(projectData),
+        body: JSON.stringify(projectData),
       });
 
       if (!res.ok) {
@@ -464,7 +464,7 @@ export default function Projects() {
 
     setIsAssigning(true);
     let successCount = 0;
-    let skipCount    = 0;
+    let skipCount = 0;
 
     try {
       for (const profileId of selectedTesters) {
@@ -472,17 +472,17 @@ export default function Projects() {
         if (!profile) continue;
 
         const res = await fetch(`${API_BASE}/projects/${selectedProject.id}/assignments`, {
-          method:  'POST',
+          method: 'POST',
           headers: authHeaders(),
-          body:    JSON.stringify({ user_id: profile.user_id, assigned_by_id: user?.id }),
+          body: JSON.stringify({ user_id: profile.user_id, assigned_by_id: user?.id }),
         });
 
-        if (res.status === 409) { skipCount++;   continue; }
-        if (res.ok)              { successCount++;          }
+        if (res.status === 409) { skipCount++; continue; }
+        if (res.ok) { successCount++; }
       }
 
       if (successCount > 0) toast.success(`${successCount} tester${successCount > 1 ? 's' : ''} assigned successfully!`);
-      if (skipCount    > 0) toast.info(`${skipCount} tester${skipCount > 1 ? 's were' : ' was'} already assigned`);
+      if (skipCount > 0) toast.info(`${skipCount} tester${skipCount > 1 ? 's were' : ' was'} already assigned`);
 
       setSelectedTesters([]);
       await fetchAssignees(selectedProject.id);
@@ -551,8 +551,8 @@ export default function Projects() {
 
   // ─── Derived ──────────────────────────────────────────────────────────────
 
-  const assignedUserIds    = new Set(currentAssignees.map(a => String(a.user_id)));
-  const availableProfiles  = profiles.filter(
+  const assignedUserIds = new Set(currentAssignees.map(a => String(a.user_id)));
+  const availableProfiles = profiles.filter(
     p => !assignedUserIds.has(String(p.user_id)) &&
       (userSearchQuery === '' || p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
   );
@@ -820,7 +820,7 @@ export default function Projects() {
                     </div>
                   )}
 
-                  {project.findings_count && project.findings_count > 0 && (
+                  {project.findings_count && project.findings_count !== 0 ? (
                     <div className="pt-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium">Findings:</span>
@@ -842,7 +842,7 @@ export default function Projects() {
                         <span className="text-sm text-muted-foreground">Total: {project.findings_count}</span>
                       </div>
                     </div>
-                  )}
+                  ) : <></>}
 
                   <div className="flex flex-wrap items-center justify-between gap-y-2 pt-2 border-t border-border/50">
                     <div className="flex items-center gap-2">
@@ -1023,7 +1023,7 @@ export default function Projects() {
                     <p className="text-sm text-muted-foreground py-2 px-1">No members assigned yet.</p>
                   ) : (
                     currentAssignees.map((assignee) => {
-                      const name      = assignee.username || String(assignee.user_id);
+                      const name = assignee.username || String(assignee.user_id);
                       const isRemoving = removingUserId === assignee.user_id;
                       return (
                         <div key={assignee.user_id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/40 border border-border/40 group">
