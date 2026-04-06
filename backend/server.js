@@ -32,27 +32,30 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware
-const notifyMiddleware = require('./middleware/notifyMiddleware');
+const authMiddleware      = require('./middleware/auth');
+const notifyMiddleware    = require('./middleware/notifyMiddleware');
 const notificationsRoutes = require('./routes/notifications');
 
 app.use(notifyMiddleware);
 
 // Routes
-const authRoutes = require('./routes/auth');
-const trendingRoutes = require('./routes/trending');
-const usersRoutes = require('./routes/user');
-const projectsRoutes = require('./routes/projects');
-const findingsRoutes = require('./routes/findings');
+const authRoutes       = require('./routes/auth');
+const trendingRoutes   = require('./routes/trending');
+const usersRoutes      = require('./routes/user');
+const projectsRoutes   = require('./routes/projects');
+const findingsRoutes   = require('./routes/findings');
 const halloffameRoutes = require('./routes/halloffame');
 
-// API routes
+// Public routes — no token needed
 app.use('/api/auth', authRoutes);
-app.use('/api/trending', trendingRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/projects', projectsRoutes);
-app.use('/api/findings', findingsRoutes);
-app.use('/api/wof', halloffameRoutes);
-app.use('/api/notifications', notificationsRoutes);
+
+// Protected routes — token required, expires 24h
+app.use('/api/trending',      authMiddleware, trendingRoutes);
+app.use('/api/users',         authMiddleware, usersRoutes);
+app.use('/api/projects',      authMiddleware, projectsRoutes);
+app.use('/api/findings',      authMiddleware, findingsRoutes);
+app.use('/api/wof',           authMiddleware, halloffameRoutes);
+app.use('/api/notifications', authMiddleware, notificationsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
