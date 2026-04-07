@@ -50,7 +50,9 @@ export default function ASM() {
         clearInterval(interval);
         setTimeout(() => {
           setFadeOut(true);
-          setTimeout(() => setLoading(false), 600);
+          setTimeout(() => {
+            window.location.href = ASM_URL;  // ← redirect instead of iframe
+          }, 600);
         }, 500);
       }
     }, stepMs);

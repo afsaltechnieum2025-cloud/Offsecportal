@@ -50,7 +50,10 @@ export default function TOIP() {
         clearInterval(interval);
         setTimeout(() => {
           setFadeOut(true);
-          setTimeout(() => setLoading(false), 600);
+          // setTimeout(() => setLoading(false), 600);
+          setTimeout(() => {
+            window.location.href = TOIP_URL;  // ← redirect instead of iframe
+          }, 600);
         }, 500);
       }
     }, stepMs);
