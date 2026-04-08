@@ -20,6 +20,15 @@ import {
   Cloud, Shield, Brain, Network, Globe, Cpu, Layers, Bot, Package,
 } from 'lucide-react';
 import { API } from '@/utils/api';
+const TRENDING_API = `${API}/trending`;
+
+
+// ─── Auth helper ──────────────────────────────────────────────────────────────
+
+const authHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -68,7 +77,9 @@ export default function Trending() {
 
   const fetchNotes = async () => {
     try {
-      const res  = await fetch(API);
+      const res  = await fetch(TRENDING_API, {
+        headers: authHeaders(),
+      });
       const data = await res.json();
       setNotes(data);
     } catch (err) { console.error('Failed to fetch notes:', err); }
@@ -78,7 +89,6 @@ export default function Trending() {
 
   const processFile = (file: File) => {
     if (!file) return;
-    // Accept all image types including HEIC from iPhone
     if (!file.type.startsWith('image/') && !file.name.match(/\.(heic|heif|jpg|jpeg|png|gif|webp|bmp|svg)$/i)) {
       alert('Please select an image file');
       return;
@@ -94,7 +104,6 @@ export default function Trending() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
-    // Reset input so same file can be re-selected
     e.target.value = '';
   };
 
@@ -145,10 +154,20 @@ export default function Trending() {
       formData.append('category', form.category);
       if (form.photo) formData.append('photo', form.photo);
 
+      // ⚠️ Do NOT set Content-Type manually — browser sets it with the correct
+      // multipart boundary automatically when body is FormData.
       if (editNote) {
-        await fetch(`${API}/${editNote.id}`, { method: 'PUT', body: formData });
+        await fetch(`${TRENDING_API}/${editNote.id}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: formData,
+        });
       } else {
-        await fetch(API, { method: 'POST', body: formData });
+        await fetch(TRENDING_API, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
       }
 
       handleCloseDialog();
@@ -162,7 +181,10 @@ export default function Trending() {
   const handleDeleteConfirm = async () => {
     if (deleteId === null) return;
     try {
-      await fetch(`${API}/${deleteId}`, { method: 'DELETE' });
+      await fetch(`${TRENDING_API}/${deleteId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
       fetchNotes();
     } catch (err) { console.error('Failed to delete note:', err); }
     finally { setDeleteId(null); }
@@ -277,7 +299,7 @@ export default function Trending() {
                 />
               </div>
 
-              {/* Photo — fixed for mobile + desktop + drag & drop */}
+              {/* Photo */}
               <div className="space-y-2">
                 <Label>Photo</Label>
                 {form.photoPreview ? (
@@ -308,7 +330,6 @@ export default function Trending() {
                     <p className="text-xs text-muted-foreground/60 mt-1">Supports JPG, PNG, HEIC, WebP — from any device</p>
                   </div>
                 )}
-                {/* Hidden input — capture="environment" helps mobile camera, multiple false for single file */}
                 <input
                   ref={fileRef}
                   type="file"

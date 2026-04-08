@@ -4,17 +4,19 @@ export type FindingType = 'pentest' | 'sast' | 'asm' | 'llm';
 export type Severity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Informational';
 export type RetestStatus = 'Open' | 'Fixed' | 'Not Fixed';
 export type CLType = 'web' | 'api' | 'cloud' | 'aiLlm';
-export type AppRole = 'admin' | 'manager' | 'tester';
+export type AppRole = 'admin' | 'manager' | 'tester' | 'client';
 
 export type Project = {
   id: string; name: string; client: string;
-  description: string | null;                // ← add this
+  description: string | null;
   domain: string | null; ip_addresses: string[] | null;
   status: string | null; start_date: string | null; end_date: string | null;
   created_at: string;
   findings_count?: number; critical_count?: number; high_count?: number;
   medium_count?: number; low_count?: number; info_count?: number; assignees_count?: number;
-  project_code?: string; 
+  project_code?: string;
+  scope: string | null;
+  test_credentials: string | null;
 };
 
 export type Finding = {
@@ -50,10 +52,31 @@ export type ChecklistRow = {
   updated_by: string | null; updated_at: string | null;
 };
 
+export type ArchComponentType =
+  | 'firewall'
+  | 'vpn'
+  | 'dns'
+  | 'cdn'
+  | 'loadbalancer'
+  | 'frontend'
+  | 'mobile'
+  | 'auth'
+  | 'api'
+  | 'server'
+  | 'database'
+  | 'cloud'
+  | 'monitoring'
+  | 'email'
+  | 'external';
+
 export type ArchComponent = {
-  id: string; name: string;
-  type: 'server' | 'database' | 'api' | 'frontend' | 'mobile' | 'cloud' | 'firewall' | 'loadbalancer' | 'external';
-  ip?: string; port?: string; tech?: string; notes?: string;
+  id: string;
+  name: string;
+  type: ArchComponentType;
+  ip?: string;
+  port?: string;
+  tech?: string;
+  notes?: string;
   connections: string[];
 };
 

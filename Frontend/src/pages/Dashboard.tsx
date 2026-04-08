@@ -557,7 +557,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Recent Projects */}
-          <Card className="animate-fade-in" style={{ animationDelay: '500ms' }}>
+          {/* <Card className="animate-fade-in" style={{ animationDelay: '500ms' }}>
             <CardHeader>
               <CardTitle className="text-lg">Recent Projects</CardTitle>
             </CardHeader>
@@ -612,10 +612,10 @@ export default function Dashboard() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Team Members — admin and manager only */}
-          {isAdminOrManager && (
+          {/* {isAdminOrManager && (
             <Card className="animate-fade-in" style={{ animationDelay: '550ms' }}>
               <CardHeader>
                 <CardTitle className="text-lg">Team Members</CardTitle>
@@ -698,7 +698,7 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-          )}
+          )} */}
 
         </div>
 

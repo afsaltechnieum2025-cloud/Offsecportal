@@ -7,7 +7,6 @@ const { sendProjectAssignmentEmail } = require('../utils/emailService');
 
 // ─── Auth middleware ─────────────────────────────────────────────────────────
 
-/** Any authenticated user */
 const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -22,7 +21,6 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-/** Admin or manager only */
 const requireAdminOrManager = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -40,7 +38,6 @@ const requireAdminOrManager = (req, res, next) => {
   }
 };
 
-/** Admin only */
 const requireAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -111,11 +108,9 @@ router.get('/test-email', requireAdmin, async (req, res) => {
     );
     if (!user) return res.status(404).json({ message: `User not found for id: ${user_id}` });
 
-    const toName  = user.full_name || user.name;
-    const toEmail = user.email;
-
     const result = await sendProjectAssignmentEmail({
-      toEmail, toName,
+      toEmail:     user.email,
+      toName:      user.full_name || user.name,
       projectName: project.name,
       clientName:  project.client,
       startDate:   project.start_date,
@@ -124,11 +119,7 @@ router.get('/test-email', requireAdmin, async (req, res) => {
       projectId:   project.id,
     });
 
-    res.json({
-      success: true,
-      message: `Test email sent successfully to ${toEmail}`,
-      resend_id: result.id,
-    });
+    res.json({ success: true, message: `Test email sent to ${user.email}`, resend_id: result.id });
   } catch (err) {
     console.error('[TEST EMAIL] Failed:', err.message);
     res.status(500).json({ success: false, message: err.message });
@@ -234,32 +225,58 @@ router.get('/:id', requireAuth, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.post('/', requireAdminOrManager, async (req, res) => {
   const {
-    name, client, description = null, domain,
-    ip_addresses = null, start_date = null, end_date = null,
-    created_by = null, status = 'active',
+    name,
+    client,
+    description      = null,
+    scope            = null,        // ← scope
+    test_credentials = null,        // ← test_credentials
+    domain,
+    ip_addresses     = null,
+    start_date       = null,
+    end_date         = null,
+    created_by       = null,
+    status           = 'active',
   } = req.body;
 
-  if (!name || !client || !domain) {
-    return res.status(400).json({ message: 'name, client, and domain are required' });
+  if (!name || !client) {
+    return res.status(400).json({ message: 'name and client are required' });
   }
 
   try {
-    const projectCode = await generateProjectCode();
-    const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);
+    const projectCode    = await generateProjectCode();
+    const [[{ newId }]]  = await db.query(`SELECT UUID() AS newId`);
+
     await db.query(
-      `INSERT INTO projects (id, name, project_code, client, description, domain, ip_addresses, start_date, end_date, created_by, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, name, projectCode, client, description, domain,
+      `INSERT INTO projects
+         (id, name, project_code, client, description, scope, test_credentials,
+          domain, ip_addresses, start_date, end_date, created_by, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newId, name, projectCode, client,
+        description,
+        scope,
+        test_credentials,
+        domain || null,
         ip_addresses ? JSON.stringify(ip_addresses) : null,
-        start_date || null, end_date || null, created_by || null, status]
+        start_date || null,
+        end_date   || null,
+        created_by || null,
+        status,
+      ]
     );
+
     const [rows] = await db.query('SELECT * FROM projects WHERE id = ?', [newId]);
     res.status(201).json({
       ...rows[0],
-      ip_addresses: rows[0].ip_addresses ? JSON.parse(rows[0].ip_addresses) : null,
-      findings_count: 0, critical_count: 0, high_count: 0,
-      medium_count: 0, low_count: 0, info_count: 0,
-      assignees_count: 0, assignedTesters: [],
+      ip_addresses:    rows[0].ip_addresses ? JSON.parse(rows[0].ip_addresses) : null,
+      findings_count:  0,
+      critical_count:  0,
+      high_count:      0,
+      medium_count:    0,
+      low_count:       0,
+      info_count:      0,
+      assignees_count: 0,
+      assignedTesters: [],
     });
   } catch (err) {
     console.error('POST /api/projects error:', err);
@@ -273,9 +290,15 @@ router.post('/', requireAdminOrManager, async (req, res) => {
 router.patch('/:id', requireAdminOrManager, async (req, res) => {
   const { id }  = req.params;
   const fields  = req.body;
-  const allowed = ['name', 'client', 'description', 'domain', 'ip_addresses', 'status', 'start_date', 'end_date'];
 
-  const keys = Object.keys(fields).filter(k => allowed.includes(k));
+  const allowed = [
+    'name', 'client', 'description',
+    'scope',            // ← scope
+    'test_credentials', // ← test_credentials
+    'domain', 'ip_addresses', 'status', 'start_date', 'end_date',
+  ];
+
+  const keys   = Object.keys(fields).filter(k => allowed.includes(k));
   const values = keys.map(k => {
     if (k === 'ip_addresses' && Array.isArray(fields[k])) return JSON.stringify(fields[k]);
     return fields[k];
@@ -299,7 +322,8 @@ router.patch('/:id', requireAdminOrManager, async (req, res) => {
         COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'high'     THEN f.id END) AS high_count,
         COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'medium'   THEN f.id END) AS medium_count,
         COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'low'      THEN f.id END) AS low_count,
-        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'info' OR LOWER(f.severity) = 'informational' THEN f.id END) AS info_count,
+        COUNT(DISTINCT CASE WHEN LOWER(f.severity) = 'info'
+                              OR LOWER(f.severity) = 'informational' THEN f.id END) AS info_count,
         COUNT(DISTINCT pa.id) AS assignees_count
       FROM projects p
       LEFT JOIN findings f ON f.project_id = p.id
@@ -407,8 +431,8 @@ router.post('/:id/assignments', requireAdminOrManager, async (req, res) => {
       }
       if (project && assignee && assignee.email) {
         sendProjectAssignmentEmail({
-          toEmail: assignee.email,
-          toName:  assignee.full_name || assignee.name,
+          toEmail:     assignee.email,
+          toName:      assignee.full_name || assignee.name,
           projectName: project.name,
           clientName:  project.client,
           startDate:   project.start_date,

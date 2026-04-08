@@ -28,6 +28,8 @@ import {
   FileText,
   Edit,
   Hash,
+  Crosshair,
+  KeyRound,
 } from 'lucide-react';
 import {
   Select,
@@ -64,12 +66,14 @@ import { API as API_BASE } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Project = {
+export type Project = {
   id: string;
   name: string;
   project_code?: string;
   client: string;
   description: string | null;
+  scope: string | null;
+  test_credentials: string | null;
   domain: string | null;
   ip_addresses: string[] | null;
   status: string | null;
@@ -77,7 +81,7 @@ type Project = {
   end_date: string | null;
   created_at: string;
   created_by: string | null;
-  assignedTesters?: (string | number)[];   // ← returned by backend
+  assignedTesters?: (string | number)[];
   findings_count?: number;
   critical_count?: number;
   high_count?: number;
@@ -104,7 +108,6 @@ type Assignee = {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem('token') ?? '';
   return {
@@ -122,7 +125,7 @@ export default function Projects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [allProjects, setAllProjects] = useState<Project[]>([]);   // ← renamed: full API response
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -143,6 +146,8 @@ export default function Projects() {
     name: '',
     client: '',
     description: '',
+    scope: '',
+    test_credentials: '',
     domain: '',
     ip_addresses: '',
     start_date: '',
@@ -155,6 +160,8 @@ export default function Projects() {
     name: '',
     client: '',
     description: '',
+    scope: '',
+    test_credentials: '',
     domain: '',
     ip_addresses: '',
     start_date: '',
@@ -177,15 +184,12 @@ export default function Projects() {
 
   const isAdminOrManager = role === 'admin' || role === 'manager';
 
-  /** Safely compare IDs regardless of string vs number from API */
   const isAssignedToProject = (project: Project): boolean => {
     if (!user?.id || !project.assignedTesters) return false;
-    return project.assignedTesters.some(
-      (t) => String(t) === String(user.id)
-    );
+    return project.assignedTesters.some((t) => String(t) === String(user.id));
   };
 
-  // ─── Visible projects memo (same pattern as Findings page) ───────────────
+  // ─── Visible projects ─────────────────────────────────────────────────────
 
   const visibleProjects = useMemo(() => {
     if (isAdminOrManager) return allProjects;
@@ -209,10 +213,10 @@ export default function Projects() {
             if (findingsRes.ok) {
               const findings = await findingsRes.json();
               const criticalCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'critical').length;
-              const highCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'high').length;
-              const mediumCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'medium').length;
-              const lowCount = findings.filter((f: any) => String(f.severity).toLowerCase() === 'low').length;
-              const infoCount = findings.filter((f: any) =>
+              const highCount     = findings.filter((f: any) => String(f.severity).toLowerCase() === 'high').length;
+              const mediumCount   = findings.filter((f: any) => String(f.severity).toLowerCase() === 'medium').length;
+              const lowCount      = findings.filter((f: any) => String(f.severity).toLowerCase() === 'low').length;
+              const infoCount     = findings.filter((f: any) =>
                 String(f.severity).toLowerCase() === 'informational' ||
                 String(f.severity).toLowerCase() === 'info'
               ).length;
@@ -242,7 +246,7 @@ export default function Projects() {
         })
       );
 
-      setAllProjects(projectsWithCounts);   // ← store in allProjects
+      setAllProjects(projectsWithCounts);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');
@@ -289,7 +293,7 @@ export default function Projects() {
     }
   };
 
-  // ─── Filter (applied to visibleProjects, not allProjects) ────────────────
+  // ─── Filter ───────────────────────────────────────────────────────────────
 
   const filteredProjects = visibleProjects.filter((project) => {
     const matchesSearch =
@@ -297,7 +301,8 @@ export default function Projects() {
       project.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (project.project_code && project.project_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (project.domain && project.domain.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (project.description && project.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      (project.description && project.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (project.scope && project.scope.toLowerCase().includes(searchQuery.toLowerCase())); // ← NEW: scope is searchable
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -324,9 +329,7 @@ export default function Projects() {
 
   const toggleTesterSelection = (profileId: string) => {
     setSelectedTesters(prev =>
-      prev.includes(profileId)
-        ? prev.filter(id => id !== profileId)
-        : [...prev, profileId]
+      prev.includes(profileId) ? prev.filter(id => id !== profileId) : [...prev, profileId]
     );
   };
 
@@ -334,7 +337,6 @@ export default function Projects() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!newProject.name || !newProject.client) {
       toast.error('Project name and client are required');
       return;
@@ -353,6 +355,8 @@ export default function Projects() {
         name: newProject.name,
         client: newProject.client,
         description: newProject.description || null,
+        scope: newProject.scope || null,
+        test_credentials: newProject.test_credentials || null,
         domain: newProject.domain || null,
         ip_addresses: ipAddresses,
         start_date: createStartDate ? createStartDate.toISOString().split('T')[0] : null,
@@ -374,7 +378,12 @@ export default function Projects() {
 
       toast.success('Project created successfully!');
       setIsDialogOpen(false);
-      setNewProject({ name: '', client: '', description: '', domain: '', ip_addresses: '', start_date: '', end_date: '', status: 'active' });
+      setNewProject({
+        name: '', client: '', description: '',
+        scope: '',
+        test_credentials: '',
+        domain: '', ip_addresses: '', start_date: '', end_date: '', status: 'active',
+      });
       setCreateStartDate(undefined);
       setCreateEndDate(undefined);
       fetchProjects();
@@ -392,6 +401,8 @@ export default function Projects() {
       name: project.name,
       client: project.client,
       description: project.description || '',
+      scope: project.scope || '',
+      test_credentials: project.test_credentials || '',
       domain: project.domain || '',
       ip_addresses: project.ip_addresses ? project.ip_addresses.join(', ') : '',
       start_date: project.start_date || '',
@@ -405,7 +416,6 @@ export default function Projects() {
 
   const handleEditProject = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!editProject.name || !editProject.client) {
       toast.error('Project name and client are required');
       return;
@@ -425,6 +435,8 @@ export default function Projects() {
         name: editProject.name,
         client: editProject.client,
         description: editProject.description || null,
+        scope: editProject.scope || null,
+        test_credentials: editProject.test_credentials || null,
         domain: editProject.domain || null,
         ip_addresses: ipAddresses,
         start_date: editStartDate ? editStartDate.toISOString().split('T')[0] : null,
@@ -578,7 +590,7 @@ export default function Projects() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, client, project code, domain..."
+              placeholder="Search by name, client, project code, domain, scope..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-secondary/50"
@@ -637,6 +649,39 @@ export default function Projects() {
                       onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                       rows={3}
                     />
+                  </div>
+
+                  {/* ── Scope ── */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Crosshair className="h-3.5 w-3.5 text-primary" />Scope
+                    </Label>
+                    <Textarea
+                      placeholder="Define what is in scope and out of scope — e.g., included domains, IP ranges, excluded environments, test boundaries..."
+                      value={newProject.scope}
+                      onChange={(e) => setNewProject({ ...newProject, scope: e.target.value })}
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets for this engagement</p>
+                  </div>
+
+                  {/* ── Test Credentials ── */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <KeyRound className="h-3.5 w-3.5 text-primary" />Testing Credentials
+                    </Label>
+                    <div className="relative">
+                      <Textarea
+                        placeholder="e.g., Username: testuser@example.com / Password: Test@1234&#10;Role: Admin — URL: https://app.example.com/login"
+                        value={newProject.test_credentials}
+                        onChange={(e) => setNewProject({ ...newProject, test_credentials: e.target.value })}
+                        rows={3}
+                        className="border-orange-500/40 bg-orange-500/5 focus:border-orange-500/70 placeholder:text-muted-foreground/50 font-mono text-sm"
+                      />
+                    </div>
+                    <p className="text-xs text-orange-400/80 flex items-center gap-1">
+                      <KeyRound className="h-3 w-3" />Store test account credentials used during this engagement
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -754,8 +799,6 @@ export default function Projects() {
                 <CardHeader className="pb-3">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div className="space-y-1 min-w-0 flex-1">
-
-                      {/* ── Project name + code badge ── */}
                       <div className="flex flex-wrap items-center gap-2">
                         <CardTitle className="text-lg group-hover:text-primary transition-colors leading-tight">
                           {project.name}
@@ -767,7 +810,6 @@ export default function Projects() {
                           </span>
                         )}
                       </div>
-
                       <p className="text-sm text-muted-foreground">{project.client}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -817,6 +859,14 @@ export default function Projects() {
                     <div className="flex items-start gap-2 text-sm pt-1">
                       <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-muted-foreground text-sm line-clamp-2">{project.description}</p>
+                    </div>
+                  )}
+
+                  {/* ── Scope preview on card (NEW) ── */}
+                  {project.scope && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <Crosshair className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <p className="text-muted-foreground text-sm line-clamp-2">{project.scope}</p>
                     </div>
                   )}
 
@@ -911,6 +961,39 @@ export default function Projects() {
                   onChange={(e) => setEditProject({ ...editProject, description: e.target.value })}
                   rows={3}
                 />
+              </div>
+
+              {/* ── Scope ── */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Crosshair className="h-3.5 w-3.5 text-primary" />Scope
+                </Label>
+                <Textarea
+                  placeholder="Define what is in scope and out of scope — e.g., included domains, IP ranges, excluded environments, test boundaries..."
+                  value={editProject.scope}
+                  onChange={(e) => setEditProject({ ...editProject, scope: e.target.value })}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets for this engagement</p>
+              </div>
+
+              {/* ── Test Credentials ── */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <KeyRound className="h-3.5 w-3.5 text-primary" />Testing Credentials
+                </Label>
+                <div className="relative">
+                  <Textarea
+                    placeholder="e.g., Username: testuser@example.com / Password: Test@1234&#10;Role: Admin — URL: https://app.example.com/login"
+                    value={editProject.test_credentials}
+                    onChange={(e) => setEditProject({ ...editProject, test_credentials: e.target.value })}
+                    rows={3}
+                    className="border-orange-500/40 bg-orange-500/5 focus:border-orange-500/70 placeholder:text-muted-foreground/50 font-mono text-sm"
+                  />
+                </div>
+                <p className="text-xs text-orange-400/80 flex items-center gap-1">
+                  <KeyRound className="h-3 w-3" />Store test account credentials used during this engagement
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

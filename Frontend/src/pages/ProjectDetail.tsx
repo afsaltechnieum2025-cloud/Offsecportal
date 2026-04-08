@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, CheckSquare, Network } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -19,6 +20,9 @@ import TeamTab from '@/components/project/tabs/TeamTab';
 import ReportsTab from '@/components/project/tabs/ReportsTab';
 import ChecklistTab from '@/components/project/tabs/ChecklistTab';
 import ArchitectureTab from '@/components/project/tabs/ArchitectureTab';
+
+// ── Types ──
+import type { ArchComponent } from '@/utils/projectTypes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +64,13 @@ export default function ProjectDetail() {
     handleGenerateScaReport,
     handleGenerateAsmReport,
     handleGenerateLlmReport,
-  } =
-    useReports(project, findings, assignees, allUsers);
+  } = useReports(project, findings, assignees, allUsers);
+
+  // ── Lifted arch state — persists across tab switches ──────────────────────
+  const [archStage, setArchStage] = useState<'upload' | 'map'>('upload');
+  const [archComponents, setArchComponents] = useState<ArchComponent[]>([]);
+  const [archCompanyName, setArchCompanyName] = useState('');
+  const [archSummary, setArchSummary] = useState('');
 
   const getFindingsByType = (type: any) => findings.filter(f => (f.finding_type || 'pentest') === type);
 
@@ -117,7 +126,9 @@ export default function ProjectDetail() {
               </SelectContent>
             </Select>
           )}
-          <span className="text-muted-foreground text-sm">{formatDate(project.start_date)} – {formatDate(project.end_date)}</span>
+          <span className="text-muted-foreground text-sm">
+            {formatDate(project.start_date)} – {formatDate(project.end_date)}
+          </span>
         </div>
 
         {/* Tabs */}
@@ -125,10 +136,18 @@ export default function ProjectDetail() {
           <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="findings">Findings ({findings.length})</TabsTrigger>
-            <TabsTrigger value="team">Team ({assignees.length > 0 ? assignees.length : (project?.assignees_count ?? 0)})</TabsTrigger>
-            {(role === 'admin' || role === 'manager') && <TabsTrigger value="reports">Reports</TabsTrigger>}
-            <TabsTrigger value="checklist"><CheckSquare className="h-3.5 w-3.5 mr-1" />Checklist</TabsTrigger>
-            <TabsTrigger value="architecture"><Network className="h-3.5 w-3.5 mr-1" />Architecture</TabsTrigger>
+            <TabsTrigger value="team">
+              Team ({assignees.length > 0 ? assignees.length : (project?.assignees_count ?? 0)})
+            </TabsTrigger>
+            {(role === 'admin' || role === 'manager') && (
+              <TabsTrigger value="reports">Reports</TabsTrigger>
+            )}
+            <TabsTrigger value="checklist">
+              <CheckSquare className="h-3.5 w-3.5 mr-1" />Checklist
+            </TabsTrigger>
+            <TabsTrigger value="architecture">
+              <Network className="h-3.5 w-3.5 mr-1" />Architecture
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -192,7 +211,16 @@ export default function ProjectDetail() {
           </TabsContent>
 
           <TabsContent value="architecture" className="space-y-6">
-            <ArchitectureTab />
+            <ArchitectureTab
+              stage={archStage}
+              setStage={setArchStage}
+              components={archComponents}
+              setComponents={setArchComponents}
+              companyName={archCompanyName}
+              setCompanyName={setArchCompanyName}
+              summary={archSummary}
+              setSummary={setArchSummary}
+            />
           </TabsContent>
         </Tabs>
       </div>
