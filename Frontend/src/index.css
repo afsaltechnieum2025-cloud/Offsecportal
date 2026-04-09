@@ -1,74 +1,114 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap'); /* ✅ first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* -------------------------------------------------------------------------- */
+/* Theme tokens — single source for colors, gradients, and shadows              */
+/* Tailwind `hsl(var(--token))` expects values as: hue sat% light% (no hsl())  */
+/* -------------------------------------------------------------------------- */
+
 @layer base {
   :root {
-    --background: 222 47% 6%;
+    /* Surfaces (dark UI scale) */
+    --surface-0: 222 47% 6%;
+    --surface-1: 222 47% 8%;
+    --surface-2: 222 47% 10%;
+    --surface-3: 222 47% 12%;
+    --surface-4: 222 47% 14%;
+    --line: 222 30% 18%;
+    --line-strong: 222 30% 16%;
+
+    /* Brand gradient stops (yellow → orange → red) */
+    --brand-1: 45 100% 50%;
+    --brand-1-bright: 45 100% 55%;
+    --brand-2: 35 100% 50%;
+    --brand-3: 25 100% 50%;
+    --brand-4: 0 80% 50%;
+
+    /* Core semantic colors */
+    --background: var(--surface-0);
     --foreground: 210 40% 96%;
 
-    --card: 222 47% 8%;
+    --card: var(--surface-1);
     --card-foreground: 210 40% 96%;
 
-    --popover: 222 47% 10%;
+    --popover: var(--surface-2);
     --popover-foreground: 210 40% 96%;
 
-    /* Technieum brand colors - Yellow to Orange to Red gradient */
-    --primary: 45 100% 50%;
-    --primary-foreground: 222 47% 6%;
+    --primary: var(--brand-1);
+    --primary-foreground: var(--surface-0);
 
-    --secondary: 222 47% 14%;
+    --secondary: var(--surface-4);
     --secondary-foreground: 210 40% 96%;
 
-    --muted: 222 47% 12%;
+    --muted: var(--surface-3);
     --muted-foreground: 215 20% 55%;
 
-    --accent: 25 100% 50%;
+    --accent: var(--brand-3);
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 45 100% 50%;
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--brand-1);
 
     --radius: 0.75rem;
 
-    /* Severity Colors */
+    /* Severity (findings / charts) */
     --critical: 0 90% 50%;
     --high: 25 95% 53%;
     --medium: 45 93% 47%;
     --low: 142 76% 36%;
     --info: 199 89% 48%;
 
-    /* Technieum Gradients - Yellow to Orange to Red */
-    --gradient-primary: linear-gradient(135deg, hsl(45 100% 50%), hsl(25 100% 50%), hsl(0 80% 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(45 100% 50% / 0.15), hsl(25 100% 50% / 0.1), hsl(0 80% 50% / 0.1));
-    --gradient-card: linear-gradient(180deg, hsl(222 47% 10%), hsl(222 47% 8%));
-    --gradient-sidebar: linear-gradient(180deg, hsl(222 47% 8%), hsl(222 47% 6%));
-    --gradient-technieum: linear-gradient(135deg, hsl(45 100% 55%) 0%, hsl(35 100% 50%) 50%, hsl(0 80% 50%) 100%);
+    /* Gradients — derived from brand + surfaces */
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(var(--brand-1)),
+      hsl(var(--brand-3)),
+      hsl(var(--brand-4))
+    );
+    --gradient-technieum: linear-gradient(
+      135deg,
+      hsl(var(--brand-1-bright)) 0%,
+      hsl(var(--brand-2)) 50%,
+      hsl(var(--brand-4)) 100%
+    );
+    --gradient-sidebar: linear-gradient(
+      180deg,
+      hsl(var(--surface-1)),
+      hsl(var(--surface-0))
+    );
 
     /* Shadows */
-    --shadow-glow: 0 0 30px hsl(45 100% 50% / 0.2);
-    --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.3);
-    --shadow-elevated: 0 8px 32px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.2);
 
+    /* Sidebar */
     --sidebar-background: 222 47% 7%;
     --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 45 100% 50%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 14%;
+    --sidebar-primary: var(--brand-1);
+    --sidebar-primary-foreground: var(--surface-0);
+    --sidebar-accent: var(--surface-4);
     --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 30% 16%;
-    --sidebar-ring: 45 100% 50%;
+    --sidebar-border: var(--line-strong);
+    --sidebar-ring: var(--brand-1);
+
+    /* Recharts / data viz (align with theme) */
+    --chart-grid: var(--border);
+    --chart-axis: var(--muted-foreground);
+    --chart-tooltip-bg: var(--popover);
+    --chart-tooltip-border: var(--border);
+    --chart-tooltip-fg: var(--foreground);
+    --chart-series-accent: var(--high);
   }
 }
 
 html {
-  font-size: 14px; /* default is 16px, this scales everything proportionally */
+  font-size: 14px;
 }
 
 @layer base {
@@ -95,14 +135,6 @@ html {
     background: var(--gradient-primary);
   }
 
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-
-  .gradient-card {
-    background: var(--gradient-card);
-  }
-
   .gradient-sidebar {
     background: var(--gradient-sidebar);
   }
@@ -122,32 +154,12 @@ html {
     box-shadow: var(--shadow-glow);
   }
 
-  .glow-text {
-    text-shadow: 0 0 20px hsl(45 100% 50% / 0.5);
-  }
-
-  .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50;
-  }
-
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
   }
 
   .animate-slide-up {
     animation: slideUp 0.5s ease-out forwards;
-  }
-
-  .animate-scale-in {
-    animation: scaleIn 0.3s ease-out forwards;
-  }
-
-  .animate-pulse-glow {
-    animation: pulseGlow 2s ease-in-out infinite;
-  }
-
-  .bg-hero-gradient {
-    background: var(--gradient-hero);
   }
 }
 
@@ -171,27 +183,7 @@ html {
   }
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 20px hsl(45 100% 50% / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px hsl(45 100% 50% / 0.5);
-  }
-}
-
-/* Scrollbar styling */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -209,12 +201,12 @@ html {
   @apply bg-muted-foreground/50;
 }
 
-/* Chart styling */
+/* Recharts — use theme tokens */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-  stroke: hsl(222 30% 18%);
+  stroke: hsl(var(--chart-grid));
 }
 
 .recharts-text {
-  fill: hsl(215 20% 55%);
+  fill: hsl(var(--chart-axis));
 }

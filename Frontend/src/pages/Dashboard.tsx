@@ -293,11 +293,11 @@ export default function Dashboard() {
   // ─── Chart data ───────────────────────────────────────────────────────────────
 
   const severityData = [
-    { name: 'Critical', value: stats.criticalFindings, color: '#ef4444' },
-    { name: 'High', value: stats.highFindings, color: '#f97316' },
-    { name: 'Medium', value: stats.mediumFindings, color: '#feaf6e' },
-    { name: 'Low', value: stats.lowFindings, color: '#fad7bf' },
-    { name: 'Informational', value: stats.infoFindings, color: '#6b7280' },
+    { name: 'Critical', value: stats.criticalFindings, color: 'hsl(var(--critical))' },
+    { name: 'High', value: stats.highFindings, color: 'hsl(var(--high))' },
+    { name: 'Medium', value: stats.mediumFindings, color: 'hsl(var(--medium))' },
+    { name: 'Low', value: stats.lowFindings, color: 'hsl(var(--low))' },
+    { name: 'Informational', value: stats.infoFindings, color: 'hsl(var(--muted-foreground))' },
   ];
 
   const monthlyData = useMemo(() => {
@@ -492,11 +492,11 @@ export default function Dashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(222 47% 10%)',
-                        border: '1px solid hsl(222 30% 18%)',
+                        backgroundColor: 'hsl(var(--chart-tooltip-bg))',
+                        border: '1px solid hsl(var(--chart-tooltip-border))',
                         borderRadius: '8px',
                       }}
-                      itemStyle={{ color: '#ffffff' }}
+                      itemStyle={{ color: 'hsl(var(--chart-tooltip-fg))' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -524,24 +524,24 @@ export default function Dashboard() {
                   <AreaChart data={monthlyData}>
                     <defs>
                       <linearGradient id="colorFindings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(var(--chart-series-accent))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--chart-series-accent))" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
-                    <XAxis dataKey="month" stroke="hsl(215 20% 55%)" />
-                    <YAxis stroke="hsl(215 20% 55%)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--chart-grid))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--chart-axis))" />
+                    <YAxis stroke="hsl(var(--chart-axis))" />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(222 47% 10%)',
-                        border: '1px solid hsl(222 30% 18%)',
+                        backgroundColor: 'hsl(var(--chart-tooltip-bg))',
+                        border: '1px solid hsl(var(--chart-tooltip-border))',
                         borderRadius: '8px',
                       }}
                     />
                     <Area
                       type="monotone"
                       dataKey="findings"
-                      stroke="#f97316"
+                      stroke="hsl(var(--chart-series-accent))"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorFindings)"
