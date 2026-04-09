@@ -122,26 +122,47 @@ export default function OverviewTab({
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</p>
               {getStatusBadge(project.status)}
             </div>
-            {/* IP Addresses — spans full row */}
-            <div className="col-span-3">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Server className="h-3.5 w-3.5 text-primary" />IP Addresses / Ranges ({project.ip_addresses?.length || 0})
-              </p>
-              {project.ip_addresses?.length ? (
-                <div className="relative rounded-lg border border-yellow-400/40 bg-gradient-to-br from-yellow-400/10 via-orange-400/5 to-yellow-300/10 p-4 overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-400" />
-                  <div className="pl-3 flex flex-wrap gap-2">
-                    {project.ip_addresses.map((ip, i) => (
-                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-500/30 font-mono text-xs text-yellow-100/90">
-                        {ip}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No IPs specified</p>
-              )}
-            </div>
+           
+          </div>
+
+          <div className="border-t border-border/40" />
+
+           {/* ── IP Addresses / Ranges ── */}
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Server className="h-3.5 w-3.5 text-primary" />IP Addresses / Ranges ({project.ip_addresses?.length || 0})
+            </p>
+            {project.ip_addresses?.length ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 flex flex-wrap gap-2">
+                {project.ip_addresses.map((ip, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary/60 border border-border font-mono text-xs text-foreground"
+                  >
+                    {ip}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No IPs specified</p>
+            )}
+          </div>
+
+          <div className="border-t border-border/40" />
+
+          {/* ── Primary Domain ── */}
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 text-primary" />Primary Domain
+            </p>
+            {project.domain ? (
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-3 flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="font-mono text-sm text-foreground">{project.domain}</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No domain specified</p>
+            )}
           </div>
 
           <div className="border-t border-border/40" />
@@ -152,11 +173,8 @@ export default function OverviewTab({
               <FileText className="h-3.5 w-3.5 text-primary" />Description
             </p>
             {project.description ? (
-              <div className="relative rounded-lg border border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-yellow-400/10 p-4 overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
-                <div className="pl-3">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-orange-100/90">{project.description}</p>
-                </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">{project.description}</p>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground italic">No description provided</p>
@@ -165,26 +183,7 @@ export default function OverviewTab({
 
           <div className="border-t border-border/40" />
 
-          {/* ── Engagement Scope ── */}
-          <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement Scope
-            </p>
-            {project.scope ? (
-              <div className="relative rounded-lg border border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-yellow-400/10 p-4 overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
-                <div className="pl-3">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-orange-100/90">{project.scope}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">No scope defined</p>
-            )}
-          </div>
-
-          <div className="border-t border-border/40" />
-
-          {/* ── Testing Credentials ── */}
+          {/* ── Testing Credentials (accent style) ── */}
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <KeyRound className="h-3.5 w-3.5 text-primary" />Testing Credentials
@@ -203,25 +202,22 @@ export default function OverviewTab({
 
           <div className="border-t border-border/40" />
 
-          {/* ── Primary Domain ── */}
+          {/* ── Engagement Scope (accent style) ── */}
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Globe className="h-3.5 w-3.5 text-primary" />Primary Domain
+              <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement Scope
             </p>
-            {project.domain ? (
-              <div className="relative rounded-lg border border-orange-400/40 bg-gradient-to-br from-orange-400/10 via-yellow-400/5 to-orange-300/10 p-4 overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-orange-400 to-yellow-300" />
-                <div className="pl-3 flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-orange-300 shrink-0" />
-                  <span className="font-mono text-sm text-orange-100/90">{project.domain}</span>
+            {project.scope ? (
+              <div className="relative rounded-lg border border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-yellow-400/10 p-4 overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
+                <div className="pl-3">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-orange-100/90">{project.scope}</p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic">No domain specified</p>
+              <p className="text-sm text-muted-foreground italic">No scope defined</p>
             )}
           </div>
-
-          <div className="border-t border-border/40" />
 
           {/* ── Assessment Coverage ── */}
           {/* <div>
@@ -264,7 +260,7 @@ export default function OverviewTab({
             <RefreshCw className="h-5 w-5 text-primary" />Remediation Tracker
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {(() => {
             const fixed    = findings.filter(f => f.retest_status === 'Fixed').length;
             const notFixed = findings.filter(f => f.retest_status === 'Not Fixed').length;
@@ -276,47 +272,50 @@ export default function OverviewTab({
               f.retest_status !== 'Fixed'
             ).length;
             return (
-              <>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <p className="text-2xl font-bold text-green-500">{fixed}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Fixed</p>
+              <div className="">
+                <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
+                <div className="pl-3 space-y-3">
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-lg bg-yellow-500/15 border border-yellow-400/35">
+                      <p className="text-2xl font-bold text-yellow-300">{fixed}</p>
+                      <p className="text-xs text-orange-100/70 mt-0.5">Fixed</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-orange-500/15 border border-orange-500/40">
+                      <p className="text-2xl font-bold text-orange-400">{notFixed}</p>
+                      <p className="text-xs text-orange-100/70 mt-0.5">Not Fixed</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/30">
+                      <p className="text-2xl font-bold text-orange-100/90">{open}</p>
+                      <p className="text-xs text-orange-100/70 mt-0.5">Pending</p>
+                    </div>
                   </div>
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-2xl font-bold text-red-500">{notFixed}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Not Fixed</p>
+                  <div>
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-xs text-orange-100/80">Fix Rate</span>
+                      <span className="text-xs font-bold text-yellow-300">{fixedPct}%</span>
+                    </div>
+                    <div className="w-full h-2.5 rounded-full overflow-hidden bg-secondary/40 border border-yellow-500/20">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-700"
+                        style={{ width: `${fixedPct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="p-3 rounded-lg bg-secondary/40 border border-border/40">
-                    <p className="text-2xl font-bold text-muted-foreground">{open}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Pending</p>
-                  </div>
+                  {critHighOpen > 0 ? (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-500/15 border border-orange-500/35">
+                      <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-orange-200/95">
+                        <span className="font-semibold text-orange-300">{critHighOpen} Critical/High</span> finding{critHighOpen !== 1 ? 's' : ''} still unresolved
+                      </p>
+                    </div>
+                  ) : findings.length > 0 ? (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/15 border border-yellow-400/35">
+                      <CheckSquare className="h-4 w-4 text-yellow-300" />
+                      <p className="text-xs text-orange-100/90 font-medium">All Critical/High findings resolved ✓</p>
+                    </div>
+                  ) : null}
                 </div>
-                <div>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-xs text-muted-foreground">Fix Rate</span>
-                    <span className="text-xs font-bold text-green-500">{fixedPct}%</span>
-                  </div>
-                  <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500 rounded-full transition-all duration-700"
-                      style={{ width: `${fixedPct}%` }}
-                    />
-                  </div>
-                </div>
-                {critHighOpen > 0 ? (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-red-500">
-                      <span className="font-semibold">{critHighOpen} Critical/High</span> finding{critHighOpen !== 1 ? 's' : ''} still unresolved
-                    </p>
-                  </div>
-                ) : findings.length > 0 ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <CheckSquare className="h-4 w-4 text-green-500" />
-                    <p className="text-xs text-green-500 font-medium">All Critical/High findings resolved ✓</p>
-                  </div>
-                ) : null}
-              </>
+              </div>
             );
           })()}
         </CardContent>
