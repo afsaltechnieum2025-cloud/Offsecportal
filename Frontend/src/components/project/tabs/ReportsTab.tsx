@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { FileText, Download, RefreshCw, Shield, Cpu, Brain, Package, Radar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,8 @@ type Props = {
   onGenerateSca: () => Promise<void>;
   onGenerateAsm: () => Promise<void>;
   onGenerateLlm: () => Promise<void>;
+  onGenerateToip: () => Promise<void>;
+  toipTestCaseCount: number;
 };
 
 // ─── ReportCard ───────────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export default function ReportsTab({
   findings, getFindingsByType,
   onGenerateTechnical, onGenerateManagement, onGenerateRetest,
   onGenerateSast, onGenerateSca, onGenerateAsm, onGenerateLlm,
+  onGenerateToip, toipTestCaseCount,
 }: Props) {
   const pentestCount  = getFindingsByType('pentest').length;
   const sastCount     = getFindingsByType('sast').length;
@@ -232,13 +234,12 @@ export default function ReportsTab({
         <ReportCard
           icon={<Radar className="h-4 w-4" />}
           title="TOIP Report"
-          description="Technieum OffSec Intelligence Portal — AI-generated test case results showing Secure / Not Secure status per category with full coverage metrics."
+          description="Technieum OffSec Intelligence Portal — exports all test cases with Assessment Result: Secure, Not Secure, or N/A when not yet marked. Grouped by category in a Word document."
           badgeLabel="Test cases"
-          badgeCount={30}
+          badgeCount={`${toipTestCaseCount}`}
           buttonLabel="Generate TOIP Report"
-          disabled={false}
-          comingSoon
-          onClick={() => toast.info('TOIP report generation coming soon')}
+          disabled={toipTestCaseCount === 0}
+          onClick={onGenerateToip}
         />
       </Section>
 

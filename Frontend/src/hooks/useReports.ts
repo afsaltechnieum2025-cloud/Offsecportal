@@ -1,5 +1,11 @@
 import { toast } from 'sonner';
-import { generateTechnicalReport, generateManagementReport, generateRetestReport } from '@/utils/reportGenerator';
+import {
+  generateTechnicalReport,
+  generateManagementReport,
+  generateRetestReport,
+  generateToipReport,
+} from '@/utils/reportGenerator';
+import type { ToipTestCase } from '@/data/toipData';
 import { authHeaders } from './useProjectData';
 import type { Project, Finding, Assignee } from '@/utils/projectTypes';
 import { API as API_BASE } from '@/utils/api';
@@ -35,6 +41,7 @@ export function useReports(
   findings: Finding[],
   assignees: Assignee[],
   allUsers: Record<string, string>,
+  toipTestCases: ToipTestCase[],
 ) {
   const pentestFindings = findings.filter(f => (f.finding_type || 'pentest') === 'pentest');
   const sastFindings = findings.filter(f => (f.finding_type || '').toLowerCase() === 'sast');
@@ -188,6 +195,31 @@ export function useReports(
     } catch { toast.error('Failed to generate LLM report'); }
   };
 
+  const handleGenerateToipReport = async () => {
+    if (!project) return;
+    if (toipTestCases.length === 0) {
+      toast.error('No TOIP test cases to export');
+      return;
+    }
+    try {
+      toast.info('Generating TOIP report…');
+      await generateToipReport(
+        buildReportProject(project),
+        toipTestCases.map(tc => ({
+          category: tc.category,
+          title: tc.title,
+          description: tc.description,
+          severity: tc.severity,
+          status: tc.status,
+        })),
+        getTesterNames(),
+      );
+      toast.success('TOIP Report generated!');
+    } catch {
+      toast.error('Failed to generate TOIP report');
+    }
+  };
+
   return {
     handleGenerateTechnicalReport,
     handleGenerateManagementReport,
@@ -196,5 +228,6 @@ export function useReports(
     handleGenerateScaReport,
     handleGenerateAsmReport,
     handleGenerateLlmReport,
+    handleGenerateToipReport,
   };
 }

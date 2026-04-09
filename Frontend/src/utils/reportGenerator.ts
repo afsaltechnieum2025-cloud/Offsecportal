@@ -1135,3 +1135,339 @@ export const generateRetestReport = async (
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `${project.targetDomain}_Retest_Report.docx`);
 };
+
+// ─── TOIP (OffSec Intelligence Portal) report — test case list with Secure / Not Secure / N/A ───
+
+export type ToipReportCase = {
+  category: string;
+  title: string;
+  description: string;
+  severity: string;
+  status: 'Secure' | 'Not Secure' | null;
+};
+
+const toipResultLabel = (status: ToipReportCase['status']): string => {
+  if (status === 'Secure') return 'Secure';
+  if (status === 'Not Secure') return 'Not Secure';
+  return 'N/A';
+};
+
+export const generateToipReport = async (
+  project: Project,
+  cases: ToipReportCase[],
+  securityAnalysts?: string[],
+) => {
+  const secureCount = cases.filter(c => c.status === 'Secure').length;
+  const notSecureCount = cases.filter(c => c.status === 'Not Secure').length;
+  const naCount = cases.filter(c => c.status !== 'Secure' && c.status !== 'Not Secure').length;
+  const total = cases.length;
+
+  const logoUrl = `${window.location.origin}/technieum-logo.png`;
+  const logoData = await fetchImageAsBase64(logoUrl);
+
+  const analystDisplay = securityAnalysts && securityAnalysts.length > 0
+    ? securityAnalysts.join(', ')
+    : 'Not Assigned';
+
+  const headerLabel = 'TECHNIEUM OFFSEC INTELLIGENCE PORTAL (TOIP)';
+  const reportSubtitle = 'OFFSEC INTELLIGENCE PORTAL (TOIP) REPORT';
+
+  const headerChildren = logoData
+    ? [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: logoData.data,
+              transformation: {
+                width: 120,
+                height: Math.round(120 * (logoData.height / logoData.width)),
+              },
+              type: 'png',
+            }),
+          ],
+          spacing: { after: 80 },
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: headerLabel, bold: true, size: 18, color: 'E85D04' })],
+          spacing: { after: 220 },
+        }),
+      ]
+    : [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: headerLabel, bold: true, size: 18, color: 'E85D04' })],
+          spacing: { after: 220 },
+        }),
+      ];
+
+  const byCategory: Record<string, ToipReportCase[]> = {};
+  for (const c of cases) {
+    const k = c.category || 'Uncategorized';
+    if (!byCategory[k]) byCategory[k] = [];
+    byCategory[k].push(c);
+  }
+  const sortedCategories = Object.keys(byCategory).sort();
+
+  const inventoryBlocks: (Paragraph | Table)[] = [];
+  let rowNum = 0;
+  for (const cat of sortedCategories) {
+    inventoryBlocks.push(
+      new Paragraph({
+        children: [new TextRun({ text: cat, bold: true, size: 26, color: 'E85D04' })],
+        spacing: { before: 320, after: 160 },
+      }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              createTableCell('#', { bold: true, shading: 'E85D04', widthPercent: 6, align: AlignmentType.CENTER }),
+              createTableCell('Title', { bold: true, shading: 'E85D04', widthPercent: 22 }),
+              createTableCell('Description', { bold: true, shading: 'E85D04', widthPercent: 38 }),
+              createTableCell('Severity', { bold: true, shading: 'E85D04', widthPercent: 12, align: AlignmentType.CENTER }),
+              createTableCell('Assessment Result', { bold: true, shading: 'E85D04', widthPercent: 22, align: AlignmentType.CENTER }),
+            ],
+          }),
+          ...byCategory[cat].map(tc => {
+            rowNum += 1;
+            return new TableRow({
+              children: [
+                createTableCell(String(rowNum), { widthPercent: 6, align: AlignmentType.CENTER }),
+                createTableCell(tc.title, { widthPercent: 22 }),
+                createTableCell(tc.description || '—', { widthPercent: 38 }),
+                createTableCell(String(tc.severity || '').toUpperCase(), { widthPercent: 12, align: AlignmentType.CENTER }),
+                createTableCell(toipResultLabel(tc.status), { widthPercent: 22, align: AlignmentType.CENTER }),
+              ],
+            });
+          }),
+        ],
+      }),
+    );
+  }
+
+  const safeFileBase = (project.targetDomain || project.name || 'Project').replace(/[^\w.-]+/g, '_');
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: { top: 1800, right: 1440, bottom: 1440, left: 1440, header: 900, footer: 720 },
+          },
+        },
+        headers: { default: new Header({ children: headerChildren }) },
+        children: [
+          ...(logoData
+            ? [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new ImageRun({
+                      data: logoData.data,
+                      transformation: {
+                        width: 180,
+                        height: Math.round(180 * (logoData.height / logoData.width)),
+                      },
+                      type: 'png',
+                    }),
+                  ],
+                  spacing: { before: 400, after: 200 },
+                }),
+              ]
+            : []),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: 'TECHNIEUM', bold: true, size: 56, color: 'E85D04' })],
+            spacing: { before: logoData ? 100 : 800, after: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: reportSubtitle, bold: true, size: 32, color: 'FAA307' })],
+            spacing: { after: 400 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: project.targetDomain, size: 28, bold: true })],
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: 'Document Classification: CONFIDENTIAL', size: 22, italics: true })],
+            spacing: { after: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: `Assessment Date: ${formatDate(project.startDate)} - ${formatDate(project.endDate)}`,
+                size: 22,
+              }),
+            ],
+            spacing: { after: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: `Report Date: ${formatDate(new Date())}`, size: 22 })],
+            spacing: { after: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: 'Report Version: 1.0', size: 22 })],
+            spacing: { after: 400 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: 'Lead Assessor: Robert Aaron', size: 22 })],
+            spacing: { after: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: `Security Analyst: ${analystDisplay}`, size: 22 })],
+            spacing: { after: 600 },
+          }),
+          new Paragraph({ children: [new PageBreak()] }),
+
+          createSectionTitle('1. DOCUMENT CONTROL'),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  createTableCell('Document Title', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell('TOIP — OffSec Intelligence Portal Test Case Report'),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Target', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell(project.targetDomain),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Target IP', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell(project.targetIPs.join(', ') || '—'),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Assessment Type', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell('Technieum OffSec Intelligence Portal (TOIP) — Structured test cases'),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Classification', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell('Confidential'),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Date', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell(formatDate(new Date())),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Security Analyst', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell(analystDisplay),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Prepared By', { bold: true, shading: 'F5F5F5' }),
+                  createTableCell('Technieum Security Assessment Services'),
+                ],
+              }),
+            ],
+          }),
+
+          createSectionTitle('2. EXECUTIVE SUMMARY'),
+          createParagraph(
+            `This report documents ${total} TOIP security test cases for ${project.targetDomain}. Each case is recorded with severity and an assessment result: Secure, Not Secure, or N/A when not yet evaluated.`,
+          ),
+          new Paragraph({
+            children: [new TextRun({ text: 'Results Summary:', bold: true, size: 24 })],
+            spacing: { before: 200, after: 100 },
+          }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  createTableCell('Result', { bold: true, shading: 'E85D04', align: AlignmentType.CENTER }),
+                  createTableCell('Count', { bold: true, shading: 'E85D04', align: AlignmentType.CENTER }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Secure', { shading: 'FEF9C3', align: AlignmentType.CENTER }),
+                  createTableCell(String(secureCount), { align: AlignmentType.CENTER }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Not Secure', { shading: 'FFEDD5', align: AlignmentType.CENTER }),
+                  createTableCell(String(notSecureCount), { align: AlignmentType.CENTER }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('N/A (not assessed)', { shading: 'F3F4F6', align: AlignmentType.CENTER }),
+                  createTableCell(String(naCount), { align: AlignmentType.CENTER }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('Total test cases', { bold: true, shading: 'F5F5F5', align: AlignmentType.CENTER }),
+                  createTableCell(String(total), { bold: true, align: AlignmentType.CENTER }),
+                ],
+              }),
+            ],
+          }),
+
+          createSectionTitle('3. TEST CASE INVENTORY (BY CATEGORY)'),
+          createParagraph(
+            'The following tables list every test case. Assessment Result reflects the current status in the portal: Secure, Not Secure, or N/A if neither option was selected.',
+          ),
+          ...inventoryBlocks,
+
+          createSectionTitle('4. CONCLUSION'),
+          createParagraph(
+            total === 0
+              ? 'No test cases were included in this report.'
+              : `Of ${total} test cases, ${secureCount} were marked Secure, ${notSecureCount} Not Secure, and ${naCount} remain N/A pending assessment.`,
+          ),
+
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: '─'.repeat(60), color: 'CCCCCC' })],
+            spacing: { before: 600 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: 'CONFIDENTIAL - Technieum Security Assessment Services', italics: true, size: 20 }),
+            ],
+            spacing: { before: 100 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: `Prepared by: Robert Aaron${analystDisplay !== 'Not Assigned' ? ` & ${analystDisplay}` : ''} | Date: ${formatDate(new Date())}`,
+                italics: true,
+                size: 20,
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, `${safeFileBase}_TOIP_Report.docx`);
+};

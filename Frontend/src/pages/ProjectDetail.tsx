@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Loader2, ArrowLeft, CheckSquare, Network } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckSquare, Network, GitBranch } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,9 +20,11 @@ import TeamTab from '@/components/project/tabs/TeamTab';
 import ReportsTab from '@/components/project/tabs/ReportsTab';
 import ChecklistTab from '@/components/project/tabs/ChecklistTab';
 import ArchitectureTab from '@/components/project/tabs/ArchitectureTab';
+import LogicFlowTab from '@/components/project/tabs/LogicFlowTab';
 
 // ── Types ──
 import type { ArchComponent } from '@/utils/projectTypes';
+import { createInitialToipTestCases } from '@/data/toipData';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,8 @@ export default function ProjectDetail() {
     addFinding, addPocs, deleteFinding, addSinglePoc, removePoc, updateFinding,
   } = useProjectData(id, userId);
 
+  const [toipTestCases, setToipTestCases] = useState(createInitialToipTestCases);
+
   const {
     handleGenerateTechnicalReport,
     handleGenerateManagementReport,
@@ -64,7 +68,8 @@ export default function ProjectDetail() {
     handleGenerateScaReport,
     handleGenerateAsmReport,
     handleGenerateLlmReport,
-  } = useReports(project, findings, assignees, allUsers);
+    handleGenerateToipReport,
+  } = useReports(project, findings, assignees, allUsers, toipTestCases);
 
   // ── Lifted arch state — persists across tab switches ──────────────────────
   const [archStage, setArchStage] = useState<'upload' | 'map'>('upload');
@@ -148,6 +153,9 @@ export default function ProjectDetail() {
             <TabsTrigger value="architecture">
               <Network className="h-3.5 w-3.5 mr-1" />Architecture
             </TabsTrigger>
+            <TabsTrigger value="logic-flow">
+              <GitBranch className="h-3.5 w-3.5 mr-1" />Logic & flow
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -177,6 +185,8 @@ export default function ProjectDetail() {
               onPocRemoved={removePoc}
               onFindingUpdated={updateFinding}
               onRefresh={fetchProjectData}
+              toipTestCases={toipTestCases}
+              setToipTestCases={setToipTestCases}
             />
           </TabsContent>
 
@@ -196,6 +206,8 @@ export default function ProjectDetail() {
                 onGenerateSca={handleGenerateScaReport}
                 onGenerateAsm={handleGenerateAsmReport}
                 onGenerateLlm={handleGenerateLlmReport}
+                onGenerateToip={handleGenerateToipReport}
+                toipTestCaseCount={toipTestCases.length}
               />
             </TabsContent>
           )}
@@ -221,6 +233,10 @@ export default function ProjectDetail() {
               summary={archSummary}
               setSummary={setArchSummary}
             />
+          </TabsContent>
+
+          <TabsContent value="logic-flow" className="space-y-4">
+            <LogicFlowTab />
           </TabsContent>
         </Tabs>
       </div>
