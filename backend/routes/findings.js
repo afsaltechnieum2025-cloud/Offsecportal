@@ -117,8 +117,10 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const severityNormalized = String(severity).charAt(0).toUpperCase() + String(severity).slice(1).toLowerCase();
-  const validFindingTypes  = ['pentest', 'sast', 'asm', 'llm'];
-  const normalizedType     = validFindingTypes.includes(finding_type) ? finding_type : 'pentest';
+
+  // ── 'secret' added here ──
+  const validFindingTypes = ['pentest', 'sast', 'asm', 'llm', 'secret'];
+  const normalizedType    = validFindingTypes.includes(finding_type) ? finding_type : 'pentest';
 
   try {
     const [[{ newId }]] = await db.query(`SELECT UUID() AS newId`);

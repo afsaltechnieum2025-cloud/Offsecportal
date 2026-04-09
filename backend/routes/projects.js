@@ -228,8 +228,12 @@ router.post('/', requireAdminOrManager, async (req, res) => {
     name,
     client,
     description      = null,
-    scope            = null,        // ← scope
-    test_credentials = null,        // ← test_credentials
+    scope            = null,
+    test_credentials = null,
+    business_logic   = null,
+    entry_points     = null,
+    auth_controls    = null,
+    tech_stack       = null,
     domain,
     ip_addresses     = null,
     start_date       = null,
@@ -249,13 +253,18 @@ router.post('/', requireAdminOrManager, async (req, res) => {
     await db.query(
       `INSERT INTO projects
          (id, name, project_code, client, description, scope, test_credentials,
+          business_logic, entry_points, auth_controls, tech_stack,
           domain, ip_addresses, start_date, end_date, created_by, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId, name, projectCode, client,
         description,
         scope,
         test_credentials,
+        business_logic || null,
+        entry_points || null,
+        auth_controls || null,
+        tech_stack || null,
         domain || null,
         ip_addresses ? JSON.stringify(ip_addresses) : null,
         start_date || null,
@@ -293,8 +302,9 @@ router.patch('/:id', requireAdminOrManager, async (req, res) => {
 
   const allowed = [
     'name', 'client', 'description',
-    'scope',            // ← scope
-    'test_credentials', // ← test_credentials
+    'scope',
+    'test_credentials',
+    'business_logic', 'entry_points', 'auth_controls', 'tech_stack',
     'domain', 'ip_addresses', 'status', 'start_date', 'end_date',
   ];
 

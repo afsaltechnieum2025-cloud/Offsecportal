@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bug, Shield, Cpu, Brain, AlertTriangle } from 'lucide-react';
+import { Bug, Shield, Cpu, Brain, AlertTriangle,KeyRound  } from 'lucide-react';
 import type { Severity, FindingType } from './projectTypes';
 
 // ─── Severity helpers ─────────────────────────────────────────────────────────
@@ -63,25 +63,37 @@ export const getRetestBadge = (status: string | null | undefined) => {
 
 // ─── Finding type config ──────────────────────────────────────────────────────
 
-export const findingTypeConfig: Record<FindingType, { label: string; icon: React.ReactNode; color: string; bgColor: string; borderColor: string; fields: string[] }> = {
+export const findingTypeConfig: Record<FindingType, {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  fields: string[];
+}> = {
   pentest: {
     label: 'Pentest', icon: <Bug className="h-4 w-4" />, color: 'text-primary',
     bgColor: 'bg-primary/10', borderColor: 'border-primary/20',
-    fields: ['severity', 'cvss_score', 'cwe_id', 'affected_component', 'steps_to_reproduce', 'impact', 'remediation']
+    fields: ['severity', 'cvss_score', 'cwe_id', 'affected_component', 'steps_to_reproduce', 'impact', 'remediation'],
   },
   sast: {
     label: 'SAST', icon: <Shield className="h-4 w-4" />, color: 'text-orange-500',
     bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20',
-    fields: ['severity', 'file_path', 'line_number', 'tool_name', 'cwe_id', 'remediation']
+    fields: ['severity', 'file_path', 'line_number', 'tool_name', 'cwe_id', 'remediation'],
   },
   asm: {
     label: 'ASM', icon: <Cpu className="h-4 w-4" />, color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/20',
-    fields: ['severity', 'asset_type', 'port', 'protocol', 'remediation']
+    fields: ['severity', 'asset_type', 'port', 'protocol', 'remediation'],
   },
   llm: {
     label: 'LLM/AI', icon: <Brain className="h-4 w-4" />, color: 'text-green-500',
     bgColor: 'bg-green-500/10', borderColor: 'border-green-500/20',
-    fields: ['severity', 'llm_category', 'prompt_example', 'impact', 'remediation']
+    fields: ['severity', 'llm_category', 'prompt_example', 'impact', 'remediation'],
+  },
+  secret: {
+    label: 'Secret', icon: <KeyRound className="h-4 w-4" />, color: 'text-amber-400',
+    bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20',
+    fields: ['severity', 'affected_component', 'tool_name', 'file_path', 'description', 'remediation'],
   },
 };

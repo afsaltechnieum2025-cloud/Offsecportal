@@ -1,6 +1,6 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FindingType = 'pentest' | 'sast' | 'asm' | 'llm';
+export type FindingType = 'pentest' | 'sast' | 'asm' | 'llm' | 'secret';
 export type Severity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Informational';
 export type RetestStatus = 'Open' | 'Fixed' | 'Not Fixed';
 export type CLType = 'web' | 'api' | 'cloud' | 'aiLlm';
@@ -17,6 +17,10 @@ export type Project = {
   project_code?: string;
   scope: string | null;
   test_credentials: string | null;
+  business_logic?: string | null;
+  entry_points?: string | null;
+  auth_controls?: string | null;
+  tech_stack?: string | null;
 };
 
 export type Finding = {

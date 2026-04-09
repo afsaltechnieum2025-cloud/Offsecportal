@@ -30,6 +30,10 @@ import {
   Hash,
   Crosshair,
   KeyRound,
+  GitBranch,
+  Network,
+  ShieldCheck,
+  Layers,
 } from 'lucide-react';
 import {
   Select,
@@ -74,6 +78,10 @@ export type Project = {
   description: string | null;
   scope: string | null;
   test_credentials: string | null;
+  business_logic?: string | null;
+  entry_points?: string | null;
+  auth_controls?: string | null;
+  tech_stack?: string | null;
   domain: string | null;
   ip_addresses: string[] | null;
   status: string | null;
@@ -146,10 +154,14 @@ export default function Projects() {
     name: '',
     client: '',
     description: '',
+    business_logic: '',
+    entry_points: '',
+    auth_controls: '',
     scope: '',
     test_credentials: '',
     domain: '',
     ip_addresses: '',
+    tech_stack: '',
     start_date: '',
     end_date: '',
     status: 'active',
@@ -160,10 +172,14 @@ export default function Projects() {
     name: '',
     client: '',
     description: '',
+    business_logic: '',
+    entry_points: '',
+    auth_controls: '',
     scope: '',
     test_credentials: '',
     domain: '',
     ip_addresses: '',
+    tech_stack: '',
     start_date: '',
     end_date: '',
     status: 'active',
@@ -355,10 +371,14 @@ export default function Projects() {
         name: newProject.name,
         client: newProject.client,
         description: newProject.description || null,
+        business_logic: newProject.business_logic.trim() || null,
+        entry_points: newProject.entry_points.trim() || null,
+        auth_controls: newProject.auth_controls.trim() || null,
         scope: newProject.scope || null,
         test_credentials: newProject.test_credentials || null,
         domain: newProject.domain || null,
         ip_addresses: ipAddresses,
+        tech_stack: newProject.tech_stack.trim() || null,
         start_date: createStartDate ? createStartDate.toISOString().split('T')[0] : null,
         end_date: createEndDate ? createEndDate.toISOString().split('T')[0] : null,
         status: newProject.status,
@@ -380,9 +400,11 @@ export default function Projects() {
       setIsDialogOpen(false);
       setNewProject({
         name: '', client: '', description: '',
+        business_logic: '', entry_points: '', auth_controls: '',
         scope: '',
         test_credentials: '',
-        domain: '', ip_addresses: '', start_date: '', end_date: '', status: 'active',
+        domain: '', ip_addresses: '', tech_stack: '',
+        start_date: '', end_date: '', status: 'active',
       });
       setCreateStartDate(undefined);
       setCreateEndDate(undefined);
@@ -401,10 +423,14 @@ export default function Projects() {
       name: project.name,
       client: project.client,
       description: project.description || '',
+      business_logic: project.business_logic || '',
+      entry_points: project.entry_points || '',
+      auth_controls: project.auth_controls || '',
       scope: project.scope || '',
       test_credentials: project.test_credentials || '',
       domain: project.domain || '',
       ip_addresses: project.ip_addresses ? project.ip_addresses.join(', ') : '',
+      tech_stack: project.tech_stack || '',
       start_date: project.start_date || '',
       end_date: project.end_date || '',
       status: project.status || 'active',
@@ -435,10 +461,14 @@ export default function Projects() {
         name: editProject.name,
         client: editProject.client,
         description: editProject.description || null,
+        business_logic: editProject.business_logic.trim() || null,
+        entry_points: editProject.entry_points.trim() || null,
+        auth_controls: editProject.auth_controls.trim() || null,
         scope: editProject.scope || null,
         test_credentials: editProject.test_credentials || null,
         domain: editProject.domain || null,
         ip_addresses: ipAddresses,
+        tech_stack: editProject.tech_stack.trim() || null,
         start_date: editStartDate ? editStartDate.toISOString().split('T')[0] : null,
         end_date: editEndDate ? editEndDate.toISOString().split('T')[0] : null,
         status: editProject.status,
@@ -651,10 +681,46 @@ export default function Projects() {
                     />
                   </div>
 
-                  {/* ── Scope ── */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />Business logic flows
+                      </Label>
+                      <Textarea
+                        placeholder="Document how the app works for testers — key workflows, states, and rules."
+                        value={newProject.business_logic}
+                        onChange={(e) => setNewProject({ ...newProject, business_logic: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        <Network className="h-3.5 w-3.5 text-primary shrink-0" />Entry points &amp; workflow
+                      </Label>
+                      <Textarea
+                        placeholder="Login pages, APIs, upload endpoints, admin panels, etc."
+                        value={newProject.entry_points}
+                        onChange={(e) => setNewProject({ ...newProject, entry_points: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <Crosshair className="h-3.5 w-3.5 text-primary" />Scope
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />Authentication &amp; access controls
+                    </Label>
+                    <Textarea
+                      placeholder="SSO, OAuth, JWT, roles, MFA, session handling, etc."
+                      value={newProject.auth_controls}
+                      onChange={(e) => setNewProject({ ...newProject, auth_controls: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement scope
                     </Label>
                     <Textarea
                       placeholder="Define what is in scope and out of scope — e.g., included domains, IP ranges, excluded environments, test boundaries..."
@@ -665,10 +731,9 @@ export default function Projects() {
                     <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets for this engagement</p>
                   </div>
 
-                  {/* ── Test Credentials ── */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <KeyRound className="h-3.5 w-3.5 text-primary" />Testing Credentials
+                      <KeyRound className="h-3.5 w-3.5 text-primary" />Testing credentials
                     </Label>
                     <div className="relative">
                       <Textarea
@@ -703,6 +768,18 @@ export default function Projects() {
                       />
                       <p className="text-xs text-muted-foreground">Comma-separated IP addresses or ranges</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-primary shrink-0" />Tech stack
+                    </Label>
+                    <Input
+                      placeholder="e.g., React, Node.js, PostgreSQL, AWS (comma-separated)"
+                      value={newProject.tech_stack}
+                      onChange={(e) => setNewProject({ ...newProject, tech_stack: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">Shown on the project overview as tags</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -963,10 +1040,46 @@ export default function Projects() {
                 />
               </div>
 
-              {/* ── Scope ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />Business logic flows
+                  </Label>
+                  <Textarea
+                    placeholder="Document how the app works for testers — key workflows, states, and rules."
+                    value={editProject.business_logic}
+                    onChange={(e) => setEditProject({ ...editProject, business_logic: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Network className="h-3.5 w-3.5 text-primary shrink-0" />Entry points &amp; workflow
+                  </Label>
+                  <Textarea
+                    placeholder="Login pages, APIs, upload endpoints, admin panels, etc."
+                    value={editProject.entry_points}
+                    onChange={(e) => setEditProject({ ...editProject, entry_points: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
-                  <Crosshair className="h-3.5 w-3.5 text-primary" />Scope
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />Authentication &amp; access controls
+                </Label>
+                <Textarea
+                  placeholder="SSO, OAuth, JWT, roles, MFA, session handling, etc."
+                  value={editProject.auth_controls}
+                  onChange={(e) => setEditProject({ ...editProject, auth_controls: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement scope
                 </Label>
                 <Textarea
                   placeholder="Define what is in scope and out of scope — e.g., included domains, IP ranges, excluded environments, test boundaries..."
@@ -977,10 +1090,9 @@ export default function Projects() {
                 <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets for this engagement</p>
               </div>
 
-              {/* ── Test Credentials ── */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
-                  <KeyRound className="h-3.5 w-3.5 text-primary" />Testing Credentials
+                  <KeyRound className="h-3.5 w-3.5 text-primary" />Testing credentials
                 </Label>
                 <div className="relative">
                   <Textarea
@@ -991,7 +1103,7 @@ export default function Projects() {
                     className="border-orange-500/40 bg-orange-500/5 focus:border-orange-500/70 placeholder:text-muted-foreground/50 font-mono text-sm"
                   />
                 </div>
-                <p className="text-xs text-orange-400/80 flex items-center gap-1">
+                  <p className="text-xs text-orange-400/80 flex items-center gap-1">
                   <KeyRound className="h-3 w-3" />Store test account credentials used during this engagement
                 </p>
               </div>
@@ -1015,6 +1127,18 @@ export default function Projects() {
                   />
                   <p className="text-xs text-muted-foreground">Comma-separated IP addresses or ranges</p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5 text-primary shrink-0" />Tech stack
+                </Label>
+                <Input
+                  placeholder="e.g., React, Node.js, PostgreSQL, AWS (comma-separated)"
+                  value={editProject.tech_stack}
+                  onChange={(e) => setEditProject({ ...editProject, tech_stack: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Shown on the project overview as tags</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
