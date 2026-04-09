@@ -23,7 +23,6 @@ import ArchitectureTab from '@/components/project/tabs/ArchitectureTab';
 import LogicFlowTab from '@/components/project/tabs/LogicFlowTab';
 
 // ── Types ──
-import type { ArchComponent } from '@/utils/projectTypes';
 import { createInitialToipTestCases } from '@/data/toipData';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -71,9 +70,8 @@ export default function ProjectDetail() {
     handleGenerateToipReport,
   } = useReports(project, findings, assignees, allUsers, toipTestCases);
 
-  // ── Lifted arch state — persists across tab switches ──────────────────────
+  // ── Lifted arch state — persists across tab switches (components live in DB via ArchitectureTab hook) ──
   const [archStage, setArchStage] = useState<'upload' | 'map'>('upload');
-  const [archComponents, setArchComponents] = useState<ArchComponent[]>([]);
   const [archCompanyName, setArchCompanyName] = useState('');
   const [archSummary, setArchSummary] = useState('');
 
@@ -224,10 +222,9 @@ export default function ProjectDetail() {
 
           <TabsContent value="architecture" className="space-y-6">
             <ArchitectureTab
+              projectId={project.id}
               stage={archStage}
               setStage={setArchStage}
-              components={archComponents}
-              setComponents={setArchComponents}
               companyName={archCompanyName}
               setCompanyName={setArchCompanyName}
               summary={archSummary}

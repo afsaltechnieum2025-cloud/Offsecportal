@@ -38,13 +38,13 @@ const notificationsRoutes = require('./routes/notifications');
 
 app.use(notifyMiddleware);
 
-// Routes
 const authRoutes       = require('./routes/auth');
 const trendingRoutes   = require('./routes/trending');
 const usersRoutes      = require('./routes/user');
 const projectsRoutes   = require('./routes/projects');
 const findingsRoutes   = require('./routes/findings');
 const halloffameRoutes = require('./routes/halloffame');
+const archRoutes       = require('./routes/arch');
 
 // Public routes — no token needed
 app.use('/api/auth', authRoutes);
@@ -52,6 +52,8 @@ app.use('/api/auth', authRoutes);
 // Protected routes — token required, expires 24h
 app.use('/api/trending',      authMiddleware, trendingRoutes);
 app.use('/api/users',         authMiddleware, usersRoutes);
+// Arch must be mounted BEFORE /api/projects to prevent /:id catching /arch/bulk
+app.use('/api/projects', authMiddleware, archRoutes);
 app.use('/api/projects',      authMiddleware, projectsRoutes);
 app.use('/api/findings',      authMiddleware, findingsRoutes);
 app.use('/api/wof',           authMiddleware, halloffameRoutes);
