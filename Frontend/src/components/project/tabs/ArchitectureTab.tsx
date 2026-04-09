@@ -1,5 +1,35 @@
 import { useState, useRef } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Building2,
+  ChevronDown,
+  FileText,
+  FolderOpen,
+  Layers,
+  Map,
+  Pencil,
+  Plus,
+  Table2,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import type { ArchComponent } from '@/utils/projectTypes';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -129,80 +159,51 @@ function parseTextFile(raw: string): { companyName: string; summary: string; com
   return { companyName, summary, components: components.slice(0, 22) };
 }
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+const inputSelectClass =
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
-const C = {
-  card:        '#161b22',
-  cardAlt:     '#1c2128',
-  border:      'rgba(255,255,255,0.08)',
-  primary:     '#f0883e',
-  primaryGlow: 'rgba(240,136,62,0.12)',
-  primaryDim:  'rgba(240,136,62,0.06)',
-  gradBg:      'linear-gradient(to bottom right, rgba(234,179,8,0.10), rgba(249,115,22,0.05), rgba(234,179,8,0.08))',
-  gradBorder:  'rgba(234,179,8,0.35)',
-  gradLeftBar: 'linear-gradient(to bottom, #facc15, #f97316)',
-  text:        '#e6edf3',
-  textOrange:  'rgba(255,237,213,0.90)',
-  textMuted:   '#7d8590',
-  textDim:     '#484f58',
-  danger:      '#f85149',
-  dangerDim:   'rgba(248,81,73,0.12)',
-  dangerBorder:'rgba(248,81,73,0.35)',
-  btnGrad:     'linear-gradient(135deg, #f0883e 0%, #d83c1e 100%)',
-} as const;
+// ── Theme-aligned panels (match Overview: accent vs neutral) ─────────────────
 
-const S = {
-  input: {
-    height: 36, fontSize: 13, borderRadius: 8,
-    border: `1px solid ${C.border}`, background: C.cardAlt,
-    padding: '0 10px', color: C.text, outline: 'none',
-    width: '100%', boxSizing: 'border-box' as const,
-  },
-  btnPrimary: {
-    padding: '8px 18px', fontSize: 13, fontWeight: 600,
-    borderRadius: 8, border: 'none', background: C.btnGrad,
-    color: '#fff', cursor: 'pointer',
-  },
-  btnOutline: {
-    padding: '8px 18px', fontSize: 13, fontWeight: 500,
-    borderRadius: 8, border: `1px solid ${C.border}`,
-    background: 'transparent', color: C.textMuted, cursor: 'pointer',
-  },
-  chip: {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '3px 10px', borderRadius: 20,
-    background: C.primaryGlow, border: `1px solid rgba(240,136,62,0.35)`,
-    color: C.primary, fontSize: 11, fontWeight: 600,
-  },
-  chipMuted: {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '3px 10px', borderRadius: 20,
-    background: C.cardAlt, border: `1px solid ${C.border}`,
-    color: C.textMuted, fontSize: 11,
-  },
-  iconBox: {
-    width: 42, height: 42, borderRadius: 10,
-    background: C.primaryGlow, border: `1px solid rgba(240,136,62,0.3)`,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 20, flexShrink: 0,
-  },
-} as const;
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function GradCard({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function YellowAccentBlock({
+  children,
+  className,
+  contentClassName,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** Override inner padding (e.g. `pl-4 text-center` for empty states) */
+  contentClassName?: string;
+}) {
   return (
-    <div style={{ position: 'relative', borderRadius: 10, border: `1px solid ${C.gradBorder}`, background: C.gradBg, padding: '14px 16px 14px 20px', overflow: 'hidden', ...style }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', borderRadius: '8px 0 0 8px', background: C.gradLeftBar }} />
-      {children}
+    <div className={cn('relative rounded-lg border border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-yellow-400/10 p-4 overflow-hidden', className)}>
+      <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
+      <div className={cn('pl-3', contentClassName)}>{children}</div>
     </div>
   );
 }
 
-function SectionLabel({ icon, children }: { icon: string; children: React.ReactNode }) {
+function OrangeAccentBlock({
+  children,
+  className,
+  contentClassName,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
+}) {
   return (
-    <p style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.09em', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-      <span style={{ color: C.primary, fontSize: 13 }}>{icon}</span>{children}
+    <div className={cn('relative rounded-lg border border-orange-500/40 bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-orange-400/10 p-4 overflow-hidden', className)}>
+      <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-orange-500 to-yellow-400" />
+      <div className={cn('pl-3', contentClassName)}>{children}</div>
+    </div>
+  );
+}
+
+function SectionHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+      {children}
     </p>
   );
 }
@@ -225,33 +226,32 @@ function CompForm({
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {fields.map(([k, label, ph]) => (
-        <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</label>
-          <input
+        <div key={k} className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</Label>
+          <Input
             value={value[k] as string}
             onChange={e => onChange({ ...value, [k]: e.target.value })}
             placeholder={ph}
-            style={S.input}
           />
         </div>
       ))}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.07em' }}>Type</label>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</Label>
         <select
           value={value.type}
           onChange={e => onChange({ ...value, type: e.target.value as ComponentType })}
-          style={S.input}
+          className={inputSelectClass}
         >
           {(Object.entries(TYPE_META) as [ComponentType, { label: string; icon: string }][]).map(([v, m]) => (
             <option key={v} value={v}>{m.icon} {m.label}</option>
           ))}
         </select>
       </div>
-      <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-        <button onClick={onCancel} style={S.btnOutline}>Cancel</button>
-        <button onClick={onSave} style={S.btnPrimary}>{saveLabel}</button>
+      <div className="md:col-span-2 flex justify-end gap-2 pt-1">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="button" className="gradient-technieum text-primary-foreground" onClick={onSave}>{saveLabel}</Button>
       </div>
     </div>
   );
@@ -260,6 +260,22 @@ function CompForm({
 // ── Main component ────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: CompFormValues = { name: '', type: 'server', ip: '', port: '', tech: '', notes: '' };
+
+const SAMPLE_FORMAT = `Client: Acme Corp
+Industry: FinTech
+
+Network & Security:
+- SonicWall Firewall
+- Cisco VPN, port 1194
+- Cloudflare CDN
+
+Frontend: React web app
+Mobile: React Native
+Backend: Node.js / Express, port 3000
+Database: PostgreSQL 10.0.1.10:5432, Redis
+Cloud: AWS (EC2, S3, Lambda)
+Auth: Okta SSO, Azure AD
+Monitoring: Datadog, PagerDuty`;
 
 export default function ArchitectureTab({
   stage, setStage,
@@ -336,325 +352,373 @@ export default function ArchitectureTab({
     return acc;
   }, {});
 
-  const css = `
-    input, textarea, select { font-family: inherit; }
-    input::placeholder, textarea::placeholder { color: ${C.textDim}; }
-    select option { background: ${C.cardAlt}; color: ${C.text}; }
-    .comp-card:hover { border-color: rgba(240,136,62,0.5) !important; background: ${C.primaryDim} !important; }
-    .inv-row:hover td { background: ${C.primaryGlow} !important; }
-    .tab-btn:hover { color: ${C.primary} !important; }
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: ${C.card}; }
-    ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
-  `;
-
   // ── Upload screen ──────────────────────────────────────────────────────────
-  if (stage === 'upload') return (
-    <div style={{ color: C.text, paddingBottom: 24 }}>
-      <style>{css}</style>
+  if (stage === 'upload') {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
+              <FolderOpen className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="text-lg">Architecture from Text File</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">
+                Upload a{' '}
+                <code className="px-1.5 py-0.5 rounded-md bg-muted border border-border text-xs font-mono text-primary">.txt</code>
+                {' '}file or paste details. The flow diagram builds automatically.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <SectionHeading icon={FileText}>Suggested file format</SectionHeading>
+            <YellowAccentBlock>
+              <pre className="text-xs sm:text-sm text-orange-100/90 leading-relaxed m-0 whitespace-pre-wrap font-mono">
+                {SAMPLE_FORMAT}
+              </pre>
+            </YellowAccentBlock>
+          </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
-        <div style={S.iconBox}>🗂️</div>
-        <div>
-          <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 4 }}>Architecture from Text File</h3>
-          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.7 }}>
-            Upload a{' '}
-            <code style={{ background: C.cardAlt, border: `1px solid ${C.gradBorder}`, padding: '1px 7px', borderRadius: 5, fontSize: 12, color: C.primary, fontFamily: 'monospace' }}>.txt</code>
-            {' '}file or paste details. The flow diagram builds automatically.
-          </p>
-        </div>
-      </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileRef.current?.click()}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            className={cn(
+              'rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all',
+              dragOver || fileName
+                ? 'border-primary/50 bg-primary/10'
+                : 'border-border bg-muted/20 hover:border-primary/30 hover:bg-muted/30',
+            )}
+          >
+            <div className="flex justify-center mb-3">
+              <div className={cn(
+                'h-12 w-12 rounded-full flex items-center justify-center',
+                fileName ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground',
+              )}>
+                <Upload className="h-6 w-6" />
+              </div>
+            </div>
+            {fileName ? (
+              <>
+                <p className="text-sm font-semibold text-primary">{fileName}</p>
+                <p className="text-xs text-muted-foreground mt-1">File ready — click Generate below</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground">Drop your .txt file here</p>
+                <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
+              </>
+            )}
+            <input ref={fileRef} type="file" accept=".txt" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+          </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <SectionLabel icon="📄">Suggested file format</SectionLabel>
-        <GradCard>
-          <pre style={{ fontSize: 12, color: C.textOrange, lineHeight: 1.9, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{`Client: Acme Corp
-Industry: FinTech
+          <div>
+            <SectionHeading icon={Pencil}>Or paste text directly</SectionHeading>
+            <Textarea
+              value={fileContent}
+              onChange={e => { setFileContent(e.target.value); setFileName(''); }}
+              rows={6}
+              placeholder="Paste your architecture description here…"
+              className="font-mono text-sm min-h-[120px]"
+            />
+          </div>
 
-Network & Security:
-- SonicWall Firewall
-- Cisco VPN, port 1194
-- Cloudflare CDN
+          {error && (
+            <p className="text-sm text-destructive flex items-center gap-2">
+              <span aria-hidden>⚠️</span> {error}
+            </p>
+          )}
 
-Frontend: React web app
-Mobile: React Native
-Backend: Node.js / Express, port 3000
-Database: PostgreSQL 10.0.1.10:5432, Redis
-Cloud: AWS (EC2, S3, Lambda)
-Auth: Okta SSO, Azure AD
-Monitoring: Datadog, PagerDuty`}</pre>
-        </GradCard>
-      </div>
-
-      <div
-        onClick={() => fileRef.current?.click()}
-        onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        style={{
-          border: `2px dashed ${dragOver || fileName ? C.primary : C.border}`,
-          borderRadius: 12, padding: '30px 20px', textAlign: 'center', cursor: 'pointer',
-          background: dragOver || fileName ? C.primaryGlow : C.primaryDim,
-          transition: 'all .2s', marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 30, marginBottom: 8 }}>{fileName ? '📄' : '📁'}</div>
-        {fileName ? (
-          <>
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.primary, marginBottom: 3 }}>{fileName}</p>
-            <p style={{ fontSize: 12, color: C.textMuted }}>File ready — click Generate below</p>
-          </>
-        ) : (
-          <>
-            <p style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 3 }}>Drop your .txt file here</p>
-            <p style={{ fontSize: 12, color: C.textMuted }}>or click to browse</p>
-          </>
-        )}
-        <input ref={fileRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
-      </div>
-
-      <div style={{ marginBottom: 8 }}>
-        <SectionLabel icon="✏️">Or paste text directly</SectionLabel>
-        <textarea
-          value={fileContent}
-          onChange={e => { setFileContent(e.target.value); setFileName(''); }}
-          rows={5}
-          placeholder="Paste your architecture description here…"
-          style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 8, border: `1px solid ${C.border}`, background: C.cardAlt, padding: '10px 12px', color: C.text, resize: 'vertical', lineHeight: 1.7, outline: 'none', fontFamily: 'monospace' }}
-        />
-      </div>
-
-      {error && <p style={{ color: C.danger, fontSize: 13, marginBottom: 8 }}>⚠️ {error}</p>}
-
-      <button
-        onClick={handleGenerate}
-        disabled={!fileContent.trim()}
-        style={{ ...S.btnPrimary, width: '100%', padding: '11px 0', fontSize: 14, opacity: fileContent.trim() ? 1 : 0.4, cursor: fileContent.trim() ? 'pointer' : 'default' }}
-      >
-        🗺️ Generate Architecture Diagram
-      </button>
-    </div>
-  );
+          <Button
+            type="button"
+            className="w-full gradient-technieum text-primary-foreground py-6 text-sm font-semibold"
+            onClick={handleGenerate}
+            disabled={!fileContent.trim()}
+          >
+            <Map className="h-4 w-4 mr-2 shrink-0" />
+            Generate Architecture Diagram
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // ── Map screen ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, color: C.text }}>
-      <style>{css}</style>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <div style={S.iconBox}>🏢</div>
-          <div>
-            {companyName && <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 3 }}>{companyName}</h3>}
-            {summary && <p style={{ fontSize: 13, color: C.textMuted, maxWidth: 520, lineHeight: 1.6 }}>{summary}</p>}
-            <p style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
-              {components.length} components · {Object.keys(layerGroups).length} layers
-            </p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                {companyName && (
+                  <CardTitle className="text-lg">{companyName}</CardTitle>
+                )}
+                {summary && (
+                  <CardDescription className="text-sm leading-relaxed max-w-xl">{summary}</CardDescription>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {components.length} components · {Object.keys(layerGroups).length} layers
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button
+                type="button"
+                className="gradient-technieum text-primary-foreground"
+                onClick={() => { setShowAddForm(v => !v); setEditingId(null); }}
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Component
+              </Button>
+              <Button type="button" variant="outline" onClick={handleReupload}>
+                Re-upload
+              </Button>
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={() => { setShowAddForm(v => !v); setEditingId(null); }} style={S.btnPrimary}>+ Add Component</button>
-          <button onClick={handleReupload} style={S.btnOutline}>↩ Re-upload</button>
-        </div>
-      </div>
-
-      {/* Layer chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {LAYER_ORDER.map(layer => {
-          const count = components.filter(c => c.type === layer).length;
-          if (!count) return null;
-          const m = TYPE_META[layer];
-          return (
-            <span key={layer} style={S.chipMuted}>
-              {m.icon} {m.label} <strong style={{ color: C.primary, marginLeft: 2 }}>{count}</strong>
-            </span>
-          );
-        })}
-      </div>
-
-      {/* View tabs */}
-      <div style={{ display: 'flex', gap: 2, background: C.cardAlt, borderRadius: 8, padding: 3, width: 'fit-content', border: `1px solid ${C.border}` }}>
-        {(['map', 'table'] as const).map(t => (
-          <button
-            key={t}
-            className="tab-btn"
-            onClick={() => setActiveTab(t)}
-            style={{
-              padding: '6px 18px', fontSize: 13, borderRadius: 6, cursor: 'pointer',
-              fontWeight: activeTab === t ? 700 : 400,
-              border: activeTab === t ? `1px solid rgba(240,136,62,0.45)` : '1px solid transparent',
-              background: activeTab === t ? C.primaryGlow : 'transparent',
-              color: activeTab === t ? C.primary : C.textMuted,
-              transition: 'color .15s',
-            }}
-          >
-            {t === 'map' ? '🗺️ Flow Map' : '📋 Inventory'}
-          </button>
-        ))}
-      </div>
-
-      {/* Add form */}
-      {showAddForm && (
-        <div style={{ borderRadius: 10, border: `1px solid rgba(240,136,62,0.45)`, background: C.card, padding: '14px 16px' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: C.primary, marginBottom: 12 }}>New Component</p>
-          <CompForm
-            value={addForm}
-            onChange={setAddForm}
-            onSave={addComponent}
-            onCancel={() => { setShowAddForm(false); setAddForm(EMPTY_FORM); }}
-            saveLabel="Add Component"
-          />
-        </div>
-      )}
-
-      {/* ── Flow Map ── */}
-      {activeTab === 'map' && (
-        <div>
-          <SectionLabel icon="⛓">Architecture Flow</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {(Object.entries(layerGroups) as [ComponentType, ArchComponent[]][]).map(([layer, comps], idx) => {
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Layer summary chips */}
+          <div className="flex flex-wrap gap-2">
+            {LAYER_ORDER.map(layer => {
+              const count = components.filter(c => c.type === layer).length;
+              if (!count) return null;
               const m = TYPE_META[layer];
               return (
-                <div key={layer} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  {idx > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0' }}>
-                      <div style={{ width: 1, height: 14, background: C.border }} />
-                      <div style={{ width: 7, height: 7, borderRight: `2px solid ${C.primary}`, borderBottom: `2px solid ${C.primary}`, transform: 'rotate(45deg)', marginTop: -5, opacity: .7 }} />
-                    </div>
-                  )}
-                  <div style={{ width: '100%', position: 'relative', borderRadius: 10, border: `1px solid ${C.gradBorder}`, background: C.gradBg, padding: '10px 12px 10px 20px', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', borderRadius: '8px 0 0 8px', background: C.gradLeftBar }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid rgba(234,179,8,0.15)` }}>
-                      <span style={{ fontSize: 15 }}>{m.icon}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: C.primary, textTransform: 'uppercase', letterSpacing: '.09em' }}>{m.label}</span>
-                      <span style={{ fontSize: 11, color: C.textDim }}>({comps.length})</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {comps.map(comp => (
-                        editingId === comp.id ? (
-                          <div key={comp.id} style={{ width: '100%', background: C.card, borderRadius: 8, padding: 12, border: `1px solid rgba(240,136,62,0.4)` }}>
-                            <CompForm value={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saveLabel="Save Changes" />
-                          </div>
-                        ) : (
-                          <div
-                            key={comp.id}
-                            className="comp-card"
-                            onClick={() => setSelectedId(selectedId === comp.id ? null : comp.id)}
-                            style={{
-                              position: 'relative', minWidth: 120, maxWidth: 200, padding: '9px 11px',
-                              borderRadius: 8, cursor: 'pointer', transition: 'all .15s',
-                              border: selectedId === comp.id ? `1px solid ${C.primary}` : `1px solid rgba(234,179,8,0.2)`,
-                              background: selectedId === comp.id ? C.primaryGlow : 'rgba(0,0,0,0.25)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontSize: 12, fontWeight: 600, color: C.textOrange, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</p>
-                                {comp.tech && comp.tech !== comp.name && (
-                                  <p style={{ fontSize: 11, color: C.primary, marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.tech}</p>
-                                )}
-                                {comp.ip && (
-                                  <p style={{ fontSize: 10, fontFamily: 'monospace', color: C.textMuted, whiteSpace: 'nowrap' }}>
-                                    {comp.ip}{comp.port ? `:${comp.port}` : ''}
-                                  </p>
-                                )}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }} onClick={e => e.stopPropagation()}>
-                                <button
-                                  onClick={() => startEdit(comp)}
-                                  title="Edit"
-                                  style={{ width: 22, height: 22, fontSize: 11, borderRadius: 4, border: `1px solid ${C.border}`, background: C.cardAlt, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >✏️</button>
-                                <button
-                                  onClick={() => deleteComp(comp.id)}
-                                  title="Delete"
-                                  style={{ width: 22, height: 22, fontSize: 11, borderRadius: 4, border: C.dangerBorder, background: C.dangerDim, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >🗑</button>
-                              </div>
-                            </div>
-                            {selectedId === comp.id && comp.notes && (
-                              <div style={{ marginTop: 7, paddingTop: 7, borderTop: `1px solid rgba(234,179,8,0.15)`, fontSize: 11, color: C.textMuted, lineHeight: 1.6 }}>
-                                💡 {comp.notes}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <Badge
+                  key={layer}
+                  variant="secondary"
+                  className="font-normal border border-border bg-muted/50 text-muted-foreground"
+                >
+                  <span className="mr-1">{m.icon}</span>
+                  {m.label}
+                  <span className="ml-1.5 font-semibold text-primary">{count}</span>
+                </Badge>
               );
             })}
           </div>
-          {!components.length && (
-            <GradCard style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <p style={{ fontSize: 28, marginBottom: 8 }}>🗺️</p>
-              <p style={{ fontSize: 14, fontWeight: 600, color: C.textOrange, marginBottom: 4 }}>No components yet</p>
-              <p style={{ fontSize: 12, color: C.textMuted }}>Add a component using the button above</p>
-            </GradCard>
-          )}
-          <p style={{ fontSize: 11, color: C.textDim, textAlign: 'center', marginTop: 12 }}>
-            Click a component to view notes · ✏️ edit · 🗑 remove
-          </p>
-        </div>
-      )}
 
-      {/* ── Inventory Table ── */}
-      {activeTab === 'table' && (
-        <div style={{ borderRadius: 10, border: `1px solid ${C.gradBorder}`, background: C.gradBg, overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: C.gradLeftBar, borderRadius: '8px 0 0 8px' }} />
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid rgba(234,179,8,0.2)` }}>
-                  {['Type', 'Name', 'Technology', 'IP / Host', 'Port(s)', 'Notes', 'Actions'].map((h, i) => (
-                    <th key={i} style={{ padding: `11px 14px 11px ${i === 0 ? '18px' : '14px'}`, textAlign: 'left', fontWeight: 700, color: C.primary, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap', background: 'rgba(0,0,0,0.2)' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {components.map((comp, i) => {
-                  const m = TYPE_META[comp.type as ComponentType] ?? TYPE_META.external;
+          <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'map' | 'table')}>
+            <TabsList className="bg-secondary/50 h-auto flex-wrap gap-1 p-1">
+              <TabsTrigger value="map" className="gap-1.5 data-[state=active]:text-primary">
+                <Map className="h-3.5 w-3.5" />
+                Flow Map
+              </TabsTrigger>
+              <TabsTrigger value="table" className="gap-1.5 data-[state=active]:text-primary">
+                <Table2 className="h-3.5 w-3.5" />
+                Inventory
+              </TabsTrigger>
+            </TabsList>
+
+            {showAddForm && (
+              <OrangeAccentBlock className="mt-4">
+                <p className="text-sm font-semibold text-orange-100/95 mb-4">New Component</p>
+                <CompForm
+                  value={addForm}
+                  onChange={setAddForm}
+                  onSave={addComponent}
+                  onCancel={() => { setShowAddForm(false); setAddForm(EMPTY_FORM); }}
+                  saveLabel="Add Component"
+                />
+              </OrangeAccentBlock>
+            )}
+
+            <TabsContent value="map" className="mt-4 space-y-4 outline-none">
+              <SectionHeading icon={Layers}>Architecture Flow</SectionHeading>
+              <div className="flex flex-col">
+                {(Object.entries(layerGroups) as [ComponentType, ArchComponent[]][]).map(([layer, comps], idx) => {
+                  const m = TYPE_META[layer];
                   return (
-                    <tr key={comp.id} className="inv-row" style={{ borderBottom: `1px solid rgba(234,179,8,0.10)`, transition: 'background .15s' }}>
-                      <td style={{ padding: '10px 14px 10px 18px' }}>
-                        <span style={S.chip}>{m.icon} {m.label}</span>
-                      </td>
-                      <td style={{ padding: '10px 14px', fontWeight: 600, color: C.textOrange, whiteSpace: 'nowrap' }}>{comp.name}</td>
-                      <td style={{ padding: '10px 14px', color: C.textMuted }}>{comp.tech || '—'}</td>
-                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: C.textMuted, fontSize: 12 }}>{comp.ip || '—'}</td>
-                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: C.textMuted, fontSize: 12 }}>{comp.port || '—'}</td>
-                      <td style={{ padding: '10px 14px', color: C.textMuted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.notes || '—'}</td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            onClick={() => { startEdit(comp); setActiveTab('map'); }}
-                            style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: `1px solid rgba(240,136,62,0.4)`, background: C.primaryGlow, cursor: 'pointer', color: C.primary }}
-                          >Edit</button>
-                          <button
-                            onClick={() => deleteComp(comp.id)}
-                            style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: C.dangerBorder, background: C.dangerDim, cursor: 'pointer', color: C.danger }}
-                          >Delete</button>
+                    <div key={layer} className="flex flex-col items-center">
+                      {idx > 0 && (
+                        <div className="flex flex-col items-center py-1">
+                          <div className="w-px h-3 bg-border" />
+                          <ChevronDown className="h-4 w-4 text-primary/70 -mt-1" />
                         </div>
-                      </td>
-                    </tr>
+                      )}
+                      <YellowAccentBlock className="w-full">
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-yellow-500/20">
+                          <span className="text-base">{m.icon}</span>
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">{m.label}</span>
+                          <span className="text-xs text-muted-foreground">({comps.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {comps.map(comp =>
+                            editingId === comp.id ? (
+                              <div key={comp.id} className="w-full rounded-lg border border-orange-500/40 bg-card p-4">
+                                <CompForm
+                                  value={editForm}
+                                  onChange={setEditForm}
+                                  onSave={saveEdit}
+                                  onCancel={() => setEditingId(null)}
+                                  saveLabel="Save Changes"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                key={comp.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedId(selectedId === comp.id ? null : comp.id)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setSelectedId(selectedId === comp.id ? null : comp.id);
+                                  }
+                                }}
+                                className={cn(
+                                  'relative min-w-[120px] max-w-[220px] rounded-lg border p-3 cursor-pointer transition-all',
+                                  'bg-secondary/50 hover:border-primary/40 hover:bg-primary/5',
+                                  selectedId === comp.id && 'ring-2 ring-primary/40 border-primary/50 bg-primary/10',
+                                )}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-foreground truncate">{comp.name}</p>
+                                    {comp.tech && comp.tech !== comp.name && (
+                                      <p className="text-[11px] text-primary truncate mt-0.5">{comp.tech}</p>
+                                    )}
+                                    {comp.ip && (
+                                      <p className="text-[10px] font-mono text-muted-foreground truncate mt-0.5">
+                                        {comp.ip}{comp.port ? `:${comp.port}` : ''}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      title="Edit"
+                                      onClick={() => startEdit(comp)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7 border-destructive/30 text-destructive hover:bg-destructive/10"
+                                      title="Delete"
+                                      onClick={() => deleteComp(comp.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                {selectedId === comp.id && comp.notes && (
+                                  <div className="mt-2 pt-2 border-t border-border/60 text-[11px] text-muted-foreground leading-relaxed">
+                                    {comp.notes}
+                                  </div>
+                                )}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </YellowAccentBlock>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-            {!components.length && (
-              <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <p style={{ fontSize: 26, marginBottom: 8 }}>🗄️</p>
-                <p style={{ fontSize: 14, fontWeight: 600, color: C.textOrange, marginBottom: 4 }}>No components yet</p>
-                <p style={{ fontSize: 12, color: C.textMuted }}>Generate from a file or add manually</p>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+              {!components.length && (
+                <YellowAccentBlock className="py-10" contentClassName="pl-4 pr-4 text-center">
+                  <Map className="h-10 w-10 mx-auto mb-3 text-primary/80" />
+                  <p className="text-sm font-semibold text-orange-100/90 mb-1">No components yet</p>
+                  <p className="text-xs text-orange-100/70">Add a component using the button above</p>
+                </YellowAccentBlock>
+              )}
+              <p className="text-xs text-center text-muted-foreground">
+                Click a component to view notes · edit or remove with the icons
+              </p>
+            </TabsContent>
+
+            <TabsContent value="table" className="mt-4 outline-none">
+              <YellowAccentBlock
+                className={components.length ? 'p-0' : 'py-10'}
+                contentClassName={components.length ? undefined : 'pl-4 pr-4 text-center'}
+              >
+                {components.length > 0 ? (
+                  <div className="pl-3 pr-0 py-0 overflow-hidden rounded-r-lg">
+                    <div className="overflow-x-auto py-1 pr-3">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-yellow-500/20 hover:bg-transparent">
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider pl-4">Type</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider">Name</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider">Technology</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider">IP / Host</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider">Port(s)</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider">Notes</TableHead>
+                            <TableHead className="text-primary font-bold uppercase text-xs tracking-wider text-right pr-4">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {components.map(comp => {
+                            const m = TYPE_META[comp.type as ComponentType] ?? TYPE_META.external;
+                            return (
+                              <TableRow key={comp.id} className="border-yellow-500/10">
+                                <TableCell className="pl-4">
+                                  <Badge variant="outline" className="font-normal border-primary/30 bg-primary/5 text-primary">
+                                    <span className="mr-1">{m.icon}</span>
+                                    {m.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-semibold text-foreground whitespace-nowrap">{comp.name}</TableCell>
+                                <TableCell className="text-muted-foreground">{comp.tech || '—'}</TableCell>
+                                <TableCell className="font-mono text-xs text-muted-foreground">{comp.ip || '—'}</TableCell>
+                                <TableCell className="font-mono text-xs text-muted-foreground">{comp.port || '—'}</TableCell>
+                                <TableCell className="text-muted-foreground max-w-[200px] truncate">{comp.notes || '—'}</TableCell>
+                                <TableCell className="text-right pr-4">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-primary/35 bg-primary/5 text-primary hover:bg-primary/10"
+                                      onClick={() => { startEdit(comp); setActiveTab('map'); }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-destructive/35 text-destructive hover:bg-destructive/10"
+                                      onClick={() => deleteComp(comp.id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Table2 className="h-10 w-10 mx-auto mb-3 text-primary/70" />
+                    <p className="text-sm font-semibold text-orange-100/90 mb-1">No components yet</p>
+                    <p className="text-xs text-orange-100/70">Generate from a file or add manually</p>
+                  </>
+                )}
+              </YellowAccentBlock>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
