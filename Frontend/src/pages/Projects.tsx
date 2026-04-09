@@ -793,7 +793,7 @@ export default function Projects() {
             </div>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
             {filteredProjects.map((project) => (
               <Card key={project.id} className="hover:border-primary/30 transition-all group" glow>
                 <CardHeader className="pb-3">
