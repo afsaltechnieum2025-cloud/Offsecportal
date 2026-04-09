@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
   Building2,
   ChevronDown,
@@ -30,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { YellowAccentBlock, OrangeAccentBlock, SectionHeading } from '@/components/project/accent-blocks';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -161,52 +161,6 @@ function parseTextFile(raw: string): { companyName: string; summary: string; com
 
 const inputSelectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
-
-// ── Theme-aligned panels (match Overview: accent vs neutral) ─────────────────
-
-function YellowAccentBlock({
-  children,
-  className,
-  contentClassName,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  /** Override inner padding (e.g. `pl-4 text-center` for empty states) */
-  contentClassName?: string;
-}) {
-  return (
-    <div className={cn('relative rounded-lg border border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-yellow-400/10 p-4 overflow-hidden', className)}>
-      <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-yellow-400 to-orange-500" />
-      <div className={cn('pl-3', contentClassName)}>{children}</div>
-    </div>
-  );
-}
-
-function OrangeAccentBlock({
-  children,
-  className,
-  contentClassName,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  contentClassName?: string;
-}) {
-  return (
-    <div className={cn('relative rounded-lg border border-orange-500/40 bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-orange-400/10 p-4 overflow-hidden', className)}>
-      <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg bg-gradient-to-b from-orange-500 to-yellow-400" />
-      <div className={cn('pl-3', contentClassName)}>{children}</div>
-    </div>
-  );
-}
-
-function SectionHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-      {children}
-    </p>
-  );
-}
 
 function CompForm({
   value, onChange, onSave, onCancel, saveLabel = 'Save',
