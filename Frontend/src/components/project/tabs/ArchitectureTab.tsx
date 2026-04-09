@@ -410,9 +410,9 @@ export default function ArchitectureTab({
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
+              {/* <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
                 <Building2 className="h-5 w-5" />
-              </div>
+              </div> */}
               <div className="min-w-0 space-y-1">
                 {companyName && (
                   <CardTitle className="text-lg">{companyName}</CardTitle>

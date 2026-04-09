@@ -168,9 +168,9 @@ export default function ChecklistTab({ clProgress, clSaving, checklistDetails, g
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
+          {/* <div className="h-11 w-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
             <CheckSquare className="h-5 w-5" />
-          </div>
+          </div> */}
           <div className="min-w-0 space-y-1">
             <CardTitle className="text-lg leading-tight">{checklistTitles[activeChecklistTab].title}</CardTitle>
             <CardDescription className="text-sm leading-relaxed">
