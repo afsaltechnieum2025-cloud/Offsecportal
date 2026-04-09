@@ -5,7 +5,20 @@ require('dotenv').config();
 
 const app = express();
 
-// Static files — BEFORE everything else
+// CORS must run before static routes so /docs PDF responses include ACAO headers
+// (otherwise fetch() from the Vite app fails for downloads).
+app.use(cors({
+  origin: [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'https://robertred.blog',
+    'https://www.robertred.blog',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
+}));
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/docs', express.static(path.join(__dirname, 'docs'), {
   setHeaders: (res, filePath) => {
@@ -13,19 +26,7 @@ app.use('/docs', express.static(path.join(__dirname, 'docs'), {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'inline');
     }
-  }
-}));
-
-// CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'https://robertred.blog',
-    'https://www.robertred.blog',
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma']
+  },
 }));
 
 app.use(express.json());

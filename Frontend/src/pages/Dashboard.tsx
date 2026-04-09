@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import {
   Users,
   Download,
   Eye,
+  FileText,
   Network,
   ShieldCheck,
   Globe,
@@ -32,7 +33,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-import { API as API_BASE, STATIC_BASE } from '@/utils/api';
+import { API as API_BASE, docsPdfUrl } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -184,11 +185,11 @@ export default function Dashboard() {
   // ─── Doc URL map ─────────────────────────────────────────────────────────────
 
   const docMap: Record<string, string> = {
-    TOIP: `${STATIC_BASE}/docs/TOIP.pdf`,
-    SAST: `${STATIC_BASE}/docs/SAST.pdf`,
-    ASM: `${STATIC_BASE}/docs/ASM.pdf`,
-    LLM: `${STATIC_BASE}/docs/LLM.pdf`,
-    AD: `${STATIC_BASE}/docs/AD.pdf`,
+    TOIP: docsPdfUrl('TOIP'),
+    SAST: docsPdfUrl('SAST'),
+    ASM: docsPdfUrl('ASM'),
+    LLM: docsPdfUrl('LLM'),
+    AD: docsPdfUrl('AD'),
   };
 
   // ─── Preview ─────────────────────────────────────────────────────────────────
@@ -703,66 +704,85 @@ export default function Dashboard() {
         </div>
 
         {/* ── Documentation Section — all roles ───────────────────────────── */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-1 rounded-full bg-gradient-to-b from-orange-500 to-orange-600 shrink-0" />
-            <div>
-              <h2 className="text-lg font-bold text-foreground tracking-tight">
-                Technieum Offensive Security Tools
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Documentation &amp; Reports
-              </p>
+        <Card
+          className="animate-fade-in overflow-hidden border-orange-500/20 bg-card/90 shadow-sm"
+          style={{ animationDelay: '300ms' }}
+        >
+          <CardHeader className="relative border-b border-orange-500/10 bg-gradient-to-r from-orange-500/[0.08] via-primary/[0.04] to-transparent pb-6 pt-6">
+            <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/10 blur-3xl" aria-hidden />
+            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 shadow-sm">
+                <Shield className="h-7 w-7 text-primary" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Technieum Offensive Security Tools
+                </CardTitle>
+                <CardDescription className="text-sm leading-relaxed">
+                  Official PDF guides for each capability—preview in the browser or download for offline use.
+                </CardDescription>
+              </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {[
-              { title: 'TOIP', subtitle: 'Offsec Intelligence Portal', icon: Network, docKey: 'TOIP' },
-              { title: 'SAST', subtitle: 'Static App Security Testing', icon: ShieldCheck, docKey: 'SAST' },
-              { title: 'ASM', subtitle: 'Attack Surface Management', icon: Globe, docKey: 'ASM' },
-              { title: 'LLM Suite', subtitle: 'LLM Penetration Testing', icon: Brain, docKey: 'LLM' },
-              { title: 'AD Suite', subtitle: 'Active Directory Pentesting', icon: Shield, docKey: 'AD' },
-            ].map((doc, index) => {
-              const Icon = doc.icon;
-              return (
-                <Card
-                  key={doc.title}
-                  className="group animate-fade-in border-orange-500/30 bg-orange-500/5 hover:border-orange-500/60 hover:bg-orange-500/10 transition-all duration-300"
-                  style={{ animationDelay: `${300 + index * 50}ms` }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="p-2.5 rounded-xl border border-orange-500/50 bg-orange-500/20 group-hover:bg-orange-500/30 transition-all duration-300">
-                        <Icon className="h-7 w-7 text-orange-400" />
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                { title: 'TOIP', subtitle: 'Offsec Intelligence Portal', icon: Network, docKey: 'TOIP' },
+                { title: 'SAST', subtitle: 'Static App Security Testing', icon: ShieldCheck, docKey: 'SAST' },
+                { title: 'ASM', subtitle: 'Attack Surface Management', icon: Globe, docKey: 'ASM' },
+                { title: 'LLM Suite', subtitle: 'LLM Penetration Testing', icon: Brain, docKey: 'LLM' },
+                { title: 'AD Suite', subtitle: 'Active Directory Pentesting', icon: Shield, docKey: 'AD' },
+              ].map((doc, index) => {
+                const Icon = doc.icon;
+                return (
+                  <div
+                    key={doc.title}
+                    className="group relative flex flex-col rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm transition-all duration-300 animate-fade-in hover:border-primary/30 hover:shadow-md"
+                    style={{ animationDelay: `${320 + index * 40}ms` }}
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-x-0 top-0 h-0.5 rounded-t-xl bg-gradient-to-r from-orange-400/0 via-primary/50 to-orange-400/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      aria-hidden
+                    />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/[0.08] text-primary transition-colors group-hover:border-orange-500/35 group-hover:bg-orange-500/[0.12]">
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-base">{doc.title}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{doc.subtitle}</p>
-                      </div>
-                      <div className="flex items-center gap-2 w-full">
-                        <button
-                          onClick={() => handlePreview(doc.docKey)}
-                          title="Preview PDF"
-                          className="flex-1 inline-flex items-center justify-center py-2 rounded-lg border border-orange-500/30 bg-transparent hover:bg-orange-500/10 text-orange-400/70 hover:text-orange-400 transition-all duration-200"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDownload(doc.docKey)}
-                          title="Download PDF"
-                          className="flex-1 inline-flex items-center justify-center py-2 rounded-lg border border-orange-500/50 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-all duration-200"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <Badge variant="outline" className="shrink-0 border-border/80 bg-muted/40 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <FileText className="mr-1 h-3 w-3" />
+                        PDF
+                      </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
+                    <div className="mt-3 min-w-0 flex-1 space-y-0.5">
+                      <h3 className="font-semibold leading-tight text-foreground">{doc.title}</h3>
+                      <p className="text-xs leading-snug text-muted-foreground">{doc.subtitle}</p>
+                    </div>
+                    <div className="mt-2.5 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        title="Preview PDF"
+                        onClick={() => handlePreview(doc.docKey)}
+                        className="inline-flex h-9 w-full items-center justify-center rounded-md border border-border/80 bg-secondary/40 text-foreground transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <Eye className="h-4 w-4 shrink-0" />
+                        <span className="sr-only">Preview PDF</span>
+                      </button>
+                      <button
+                        type="button"
+                        title="Download PDF"
+                        onClick={() => handleDownload(doc.docKey)}
+                        className="inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium gradient-technieum text-primary-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <Download className="h-4 w-4 shrink-0" />
+                        <span className="sr-only">Download PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
       </div>
     </DashboardLayout>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import {
   Calendar,
   Users as UsersIcon,
   Globe,
-  Server,
   ChevronRight,
   Filter,
   Loader2,
@@ -25,7 +24,6 @@ import {
   Check,
   UserMinus,
   AlertTriangle,
-  FileText,
   Edit,
   Hash,
   Crosshair,
@@ -322,6 +320,26 @@ export default function Projects() {
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  /** Same ordering as before: sort by numeric part of project code; missing code last */
+  const sortedFilteredProjects = useMemo(() => {
+    const sortKey = (p: Project): [number, string, string] => {
+      const c = p.project_code?.trim();
+      if (!c) return [Number.MAX_SAFE_INTEGER, '', p.name];
+      const nums = c.match(/\d+/g);
+      const n = nums?.length ? parseInt(nums[nums.length - 1], 10) : NaN;
+      if (!Number.isNaN(n)) return [n, c, p.name];
+      return [Number.MAX_SAFE_INTEGER - 1, c, p.name];
+    };
+    return [...filteredProjects].sort((a, b) => {
+      const [na, ca, na2] = sortKey(a);
+      const [nb, cb, nb2] = sortKey(b);
+      if (na !== nb) return na - nb;
+      const cmp = ca.localeCompare(cb);
+      if (cmp !== 0) return cmp;
+      return na2.localeCompare(nb2);
+    });
+  }, [filteredProjects]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -870,133 +888,171 @@ export default function Projects() {
             </div>
           </Card>
         ) : (
-          <div className="flex flex-col gap-2">
-            {filteredProjects.map((project) => (
-              <Card key={project.id} className="hover:border-primary/30 transition-all group" glow>
-                <CardHeader className="pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="space-y-1 min-w-0 flex-1">
+          <div className="space-y-4">
+            {sortedFilteredProjects.map((project) => {
+              const previewText =
+                project.description?.trim() || project.scope?.trim() || '';
+              return (
+                <Card
+                  key={project.id}
+                  className="border-orange-500/15 bg-card/80 transition-colors hover:border-orange-500/30"
+                >
+                  <CardContent className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {project.project_code ? (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+                              <Hash className="h-3 w-3" />
+                              {project.project_code}
+                            </span>
+                          ) : null}
+                          <Link
+                            to={`/projects/${project.id}`}
+                            className="text-base font-semibold leading-tight text-foreground hover:text-primary transition-colors"
+                          >
+                            {project.name}
+                          </Link>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{project.client}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {getStatusBadge(project.status)}
+                        {isAdminOrManager && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-border bg-secondary/50 text-xs"
+                            onClick={() => openEditDialog(project)}
+                          >
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                            Edit
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                      <div className="min-w-0">
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Domain
+                        </p>
+                        <p className="truncate text-sm font-semibold">
+                          {project.domain || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          IP addresses
+                        </p>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {project.ip_addresses?.length ?? 0}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Timeline
+                        </p>
+                        <p className="text-sm font-semibold leading-snug">
+                          {formatDate(project.start_date)} – {formatDate(project.end_date)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Team
+                        </p>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {project.assignees_count ?? 0}{' '}
+                          {(project.assignees_count ?? 0) === 1 ? 'tester' : 'testers'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {previewText ? (
+                      <p className="line-clamp-2 text-sm text-muted-foreground">{previewText}</p>
+                    ) : null}
+
+                    {!!project.findings_count && project.findings_count > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="mr-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Findings
+                        </span>
+                        {(project.critical_count ?? 0) > 0 && (
+                          <Badge className="text-xs border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400">
+                            {project.critical_count} Critical
+                          </Badge>
+                        )}
+                        {(project.high_count ?? 0) > 0 && (
+                          <Badge className="text-xs border-orange-500/25 bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                            {project.high_count} High
+                          </Badge>
+                        )}
+                        {(project.medium_count ?? 0) > 0 && (
+                          <Badge className="text-xs border-yellow-500/25 bg-yellow-500/10 text-yellow-700 dark:text-yellow-500">
+                            {project.medium_count} Medium
+                          </Badge>
+                        )}
+                        {(project.low_count ?? 0) > 0 && (
+                          <Badge className="text-xs border-yellow-500/20 bg-yellow-500/5 text-muted-foreground">
+                            {project.low_count} Low
+                          </Badge>
+                        )}
+                        {(project.info_count ?? 0) > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {project.info_count} Info
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          ({project.findings_count} total)
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-col gap-3 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {project.findings_count ?? 0}
+                        </span>{' '}
+                        findings recorded
+                      </p>
                       <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors leading-tight">
-                          {project.name}
-                        </CardTitle>
-                        {project.project_code && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold bg-primary/10 text-primary border border-primary/30 shrink-0">
-                            <Hash className="h-3 w-3" />
-                            {project.project_code}
-                          </span>
+                        {isAdminOrManager && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-border bg-secondary/50"
+                            onClick={() => openAssignDialog(project)}
+                          >
+                            <UserPlus className="h-4 w-4 mr-1.5" />
+                            Assign
+                          </Button>
                         )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{project.client}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {getStatusBadge(project.status)}
-                      {isAdminOrManager && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => openEditDialog(project)}
-                        >
-                          <Edit className="h-4 w-4" />
+                        {role === 'admin' && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                            onClick={() => openDeleteDialog(project)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1.5" />
+                            Delete
+                          </Button>
+                        )}
+                        <Button type="button" size="sm" className="gradient-technieum" asChild>
+                          <Link to={`/projects/${project.id}`}>
+                            Open project
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Link>
                         </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 text-sm min-w-0">
-                      <Globe className="h-4 w-4 text-primary shrink-0" />
-                      <span className="text-muted-foreground truncate">
-                        {project.domain || 'No domain set'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Server className="h-4 w-4 text-primary shrink-0" />
-                      <span className="text-muted-foreground">
-                        {project.ip_addresses?.length || 0} IP{project.ip_addresses?.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm col-span-1">
-                      <Calendar className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground leading-snug">
-                        {formatDate(project.start_date)} – {formatDate(project.end_date)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <UsersIcon className="h-4 w-4 text-primary shrink-0" />
-                      <span className="text-muted-foreground">
-                        {project.assignees_count ?? 0} Tester{project.assignees_count !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  {project.description && (
-                    <div className="flex items-start gap-2 text-sm pt-1">
-                      <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-muted-foreground text-sm line-clamp-2">{project.description}</p>
-                    </div>
-                  )}
-
-                  {/* ── Scope preview on card (NEW) ── */}
-                  {project.scope && (
-                    <div className="flex items-start gap-2 text-sm">
-                      <Crosshair className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-muted-foreground text-sm line-clamp-2">{project.scope}</p>
-                    </div>
-                  )}
-
-                  {project.findings_count && project.findings_count !== 0 ? (
-                    <div className="pt-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">Findings:</span>
-                        {project.critical_count > 0 && (
-                          <Badge className="bg-red-500/10 text-red-500 border-red-500/20">{project.critical_count} Critical</Badge>
-                        )}
-                        {project.high_count > 0 && (
-                          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20">{project.high_count} High</Badge>
-                        )}
-                        {project.medium_count > 0 && (
-                          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{project.medium_count} Medium</Badge>
-                        )}
-                        {project.low_count > 0 && (
-                          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{project.low_count} Low</Badge>
-                        )}
-                        {project.info_count > 0 && (
-                          <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">{project.info_count} Info</Badge>
-                        )}
-                        <span className="text-sm text-muted-foreground">Total: {project.findings_count}</span>
                       </div>
                     </div>
-                  ) : <></>}
-
-                  <div className="flex flex-wrap items-center justify-between gap-y-2 pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{project.findings_count ?? 0}</span>
-                      <span className="text-sm text-muted-foreground">Total Findings</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {isAdminOrManager && (
-                        <Button variant="ghost" size="sm" onClick={() => openAssignDialog(project)}>
-                          <UserPlus className="h-4 w-4 mr-1" />Assign
-                        </Button>
-                      )}
-                      {role === 'admin' && (
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(project)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Link to={`/projects/${project.id}`}>
-                        <Button variant="ghost" size="sm">
-                          View Details <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
