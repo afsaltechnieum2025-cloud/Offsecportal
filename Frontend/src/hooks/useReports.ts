@@ -51,6 +51,7 @@ export function useReports(
   });
   const asmFindings = findings.filter(f => (f.finding_type || '').toLowerCase() === 'asm');
   const llmFindings = findings.filter(f => (f.finding_type || '').toLowerCase() === 'llm');
+  const secretFindings = findings.filter(f => (f.finding_type || '').toLowerCase() === 'secret');
 
   const getTesterNames = () => Array.from(
     new Set(
@@ -195,6 +196,22 @@ export function useReports(
     } catch { toast.error('Failed to generate LLM report'); }
   };
 
+  const handleGenerateSecretReport = async () => {
+    if (!project) return;
+    try {
+      toast.info('Generating Secret Detection report…');
+      const pocImages = await buildPocMapFor(secretFindings);
+      await generateTechnicalReport(
+        buildReportProject(project),
+        buildReportFindings(secretFindings, project.id).map(f => ({ ...f, evidence: pocImages[f.id] || [] })),
+        pocImages,
+        getTesterNames(),
+        'Secret',
+      );
+      toast.success('Secret Detection Report generated!');
+    } catch { toast.error('Failed to generate Secret report'); }
+  };
+
   const handleGenerateToipReport = async () => {
     if (!project) return;
     if (toipTestCases.length === 0) {
@@ -228,6 +245,7 @@ export function useReports(
     handleGenerateScaReport,
     handleGenerateAsmReport,
     handleGenerateLlmReport,
+    handleGenerateSecretReport,
     handleGenerateToipReport,
   };
 }

@@ -1,4 +1,4 @@
-import { FileText, Download, RefreshCw, Shield, Cpu, Brain, Package, Radar } from 'lucide-react';
+import { FileText, Download, RefreshCw, Shield, Cpu, Brain, Package, Radar, KeyRound } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Finding, FindingType } from '@/utils/projectTypes';
@@ -24,6 +24,7 @@ type Props = {
   onGenerateSca: () => Promise<void>;
   onGenerateAsm: () => Promise<void>;
   onGenerateLlm: () => Promise<void>;
+  onGenerateSecret: () => Promise<void>;
   onGenerateToip: () => Promise<void>;
   toipTestCaseCount: number;
 };
@@ -113,12 +114,13 @@ export default function ReportsTab({
   findings, getFindingsByType,
   onGenerateTechnical, onGenerateManagement, onGenerateRetest,
   onGenerateSast, onGenerateSca, onGenerateAsm, onGenerateLlm,
-  onGenerateToip, toipTestCaseCount,
+  onGenerateSecret, onGenerateToip, toipTestCaseCount,
 }: Props) {
   const pentestCount  = getFindingsByType('pentest').length;
   const sastCount     = getFindingsByType('sast').length;
   const asmCount      = getFindingsByType('asm').length;
   const llmCount      = getFindingsByType('llm').length;
+  const secretCount   = getFindingsByType('secret').length;
   const fixedCount    = findings.filter(f => f.retest_status === 'Fixed').length;
   const notFixedCount = findings.filter(f => f.retest_status === 'Not Fixed').length;
   const openCount     = findings.filter(f => !f.retest_status || f.retest_status === 'Open').length;
@@ -217,6 +219,22 @@ export default function ReportsTab({
           disabled={sastCount === 0}
           onClick={onGenerateSca}
         />
+      </Section>
+
+      {/* ── Secrets detection (same Word template as SAST/ASM/LLM technical reports) ── */}
+      <Section title="Secrets Detection">
+        <div className="md:col-span-2">
+          <ReportCard
+            icon={<KeyRound className="h-4 w-4" />}
+            title="Secret Detection Report"
+            description="Credential and secret scanning — exposed API keys, tokens, certificates, passwords in code and configuration, with remediation guidance aligned to your secret findings."
+            badgeLabel="Secret findings"
+            badgeCount={secretCount}
+            buttonLabel="Generate Secret Report"
+            disabled={secretCount === 0}
+            onClick={onGenerateSecret}
+          />
+        </div>
       </Section>
 
       {/* ── Attack Surface ── */}

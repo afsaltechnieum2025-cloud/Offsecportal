@@ -152,6 +152,7 @@ const getAssessmentType = (reportSuffix: string): string => {
     SCA:        'Software Composition Analysis (SCA)',
     ASM:        'Attack Surface Management (ASM)',
     LLM:        'AI / LLM Security Assessment',
+    Secret:     'Secret Detection & Exposed Credentials',
     Retest:     'Retest / Remediation Verification',
   };
   return map[reportSuffix] ?? `${reportSuffix} Security Assessment`;
@@ -164,6 +165,7 @@ const getReportSubtitle = (reportSuffix: string): string => {
     SCA:        'SOFTWARE COMPOSITION ANALYSIS REPORT',
     ASM:        'ATTACK SURFACE MANAGEMENT REPORT',
     LLM:        'AI / LLM SECURITY ASSESSMENT REPORT',
+    Secret:     'SECRET DETECTION & CREDENTIALS REPORT',
     Retest:     'RETEST SUMMARY REPORT',
   };
   return map[reportSuffix] ?? `${reportSuffix.toUpperCase()} SECURITY REPORT`;
@@ -176,6 +178,7 @@ const getHeaderLabel = (reportSuffix: string): string => {
     SCA:        'TECHNIEUM SCA ASSESSMENT',
     ASM:        'TECHNIEUM ATTACK SURFACE ASSESSMENT',
     LLM:        'TECHNIEUM AI / LLM ASSESSMENT',
+    Secret:     'TECHNIEUM SECRET DETECTION ASSESSMENT',
     Retest:     'TECHNIEUM RETEST SUMMARY',
   };
   return map[reportSuffix] ?? 'TECHNIEUM SECURITY ASSESSMENT';
@@ -188,6 +191,7 @@ const getIntroText = (reportSuffix: string, targetDomain: string): string => {
     SCA:       `A Software Composition Analysis (SCA) assessment was conducted on ${targetDomain} to identify vulnerable open-source dependencies, outdated packages, CVE-mapped library risks, and license compliance issues.`,
     ASM:       `An Attack Surface Management (ASM) assessment was conducted on ${targetDomain} to enumerate exposed assets, open ports, running services, cloud misconfigurations, and external attack surface vectors.`,
     LLM:       `An AI/LLM Security Assessment was conducted on ${targetDomain} to identify prompt injection risks, jailbreak vectors, data exfiltration scenarios, excessive agency issues, RAG poisoning, and model abuse attack surfaces.`,
+    Secret:    `A secret detection assessment was conducted on ${targetDomain} to identify exposed credentials, API keys, tokens, certificates, and other sensitive material in repositories, configuration, CI/CD artifacts, and related assets.`,
   };
   return map[reportSuffix] ?? `A ${reportSuffix} security assessment was conducted on ${targetDomain} to identify vulnerabilities and security weaknesses.`;
 };

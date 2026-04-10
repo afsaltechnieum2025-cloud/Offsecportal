@@ -67,6 +67,7 @@ export default function ProjectDetail() {
     handleGenerateScaReport,
     handleGenerateAsmReport,
     handleGenerateLlmReport,
+    handleGenerateSecretReport,
     handleGenerateToipReport,
   } = useReports(project, findings, assignees, allUsers, toipTestCases);
 
@@ -204,6 +205,7 @@ export default function ProjectDetail() {
                 onGenerateSca={handleGenerateScaReport}
                 onGenerateAsm={handleGenerateAsmReport}
                 onGenerateLlm={handleGenerateLlmReport}
+                onGenerateSecret={handleGenerateSecretReport}
                 onGenerateToip={handleGenerateToipReport}
                 toipTestCaseCount={toipTestCases.length}
               />
