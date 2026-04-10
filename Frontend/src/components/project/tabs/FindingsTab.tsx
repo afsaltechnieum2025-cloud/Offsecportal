@@ -250,8 +250,8 @@ export default function FindingsTab({
         )}
 
         {/* ── Filters row ── */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={`Search ${config.label.toLowerCase()} findings...`}
@@ -261,7 +261,7 @@ export default function FindingsTab({
             />
           </div>
           <Select value={severityFilter} onValueChange={setSeverityFilter}>
-            <SelectTrigger className="w-full sm:w-40 bg-secondary/50"><SelectValue placeholder="Severity" /></SelectTrigger>
+            <SelectTrigger className="w-full min-w-0 bg-secondary/50 sm:w-40"><SelectValue placeholder="Severity" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Severity</SelectItem>
               <SelectItem value="Critical">Critical</SelectItem>
@@ -271,13 +271,13 @@ export default function FindingsTab({
               <SelectItem value="Informational">Informational</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="default" className="gradient-technieum" onClick={() => openAddFindingDialog(type)}>
-            <Plus className="h-4 w-4 mr-2" />Add {config.label} Finding
+          <Button variant="default" className="gradient-technieum w-full shrink-0 sm:w-auto" onClick={() => openAddFindingDialog(type)}>
+            <Plus className="h-4 w-4 mr-2 shrink-0" />Add {config.label} Finding
           </Button>
         </div>
 
         {/* ── Severity summary cards ── */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5">
           {(['Critical', 'High', 'Medium', 'Low', 'Informational'] as Severity[]).map(sev => {
             const count = typeFindings.filter(f => normalizeSeverity(f.severity) === sev).length;
             const st = FINDING_STATS_SEV[sev];
@@ -576,7 +576,7 @@ export default function FindingsTab({
   return (
     <>
       <Tabs value={activeFindingTab} onValueChange={setActiveFindingTab} className="space-y-4">
-        <TabsList className="bg-secondary/50 h-auto gap-1 p-1 flex-wrap">
+        <TabsList className="bg-secondary/50 h-auto w-full max-w-full justify-start gap-1 overflow-x-auto overscroll-x-contain p-1 flex-nowrap [-webkit-overflow-scrolling:touch] sm:flex-wrap">
 
           {/* Standard finding type tabs */}
           {(['pentest', 'sast', 'asm', 'llm'] as FindingType[]).map(type => {
@@ -584,28 +584,28 @@ export default function FindingsTab({
             const TabTypeIcon = config.Icon;
             const count  = getFindingsByType(type).length;
             return (
-              <TabsTrigger key={type} value={type} className="flex items-center gap-2 text-sm">
-                <TabTypeIcon className="h-4 w-4 shrink-0" />{config.label}
+              <TabsTrigger key={type} value={type} className="flex shrink-0 items-center gap-1.5 px-2.5 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+                <TabTypeIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />{config.label}
                 <span className={TAB_COUNT_BADGE_CLASS}>{count}</span>
               </TabsTrigger>
             );
           })}
 
           {/* SCA tab */}
-          <TabsTrigger value="sca" className="flex items-center gap-2 text-sm">
-            <ScaTabIcon className="h-4 w-4 shrink-0" />{SCA_TAB_CONFIG.label}
+          <TabsTrigger value="sca" className="flex shrink-0 items-center gap-1.5 px-2.5 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+            <ScaTabIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />{SCA_TAB_CONFIG.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{scaCount}</span>
           </TabsTrigger>
 
           {/* Secret tab */}
-          <TabsTrigger value="secret" className="flex items-center gap-2 text-sm">
-            <SecretTabIcon className="h-4 w-4 shrink-0" />{findingTypeConfig.secret.label}
+          <TabsTrigger value="secret" className="flex shrink-0 items-center gap-1.5 px-2.5 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+            <SecretTabIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />{findingTypeConfig.secret.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{secretCount}</span>
           </TabsTrigger>
 
           {/* TOIP tab */}
-          <TabsTrigger value="toip" className="flex items-center gap-2 text-sm">
-            <ToipTabIcon className="h-4 w-4 shrink-0" />{TOIP_TAB_CONFIG.label}
+          <TabsTrigger value="toip" className="flex shrink-0 items-center gap-1.5 px-2.5 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+            <ToipTabIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />{TOIP_TAB_CONFIG.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{toipTestCases.length}</span>
           </TabsTrigger>
         </TabsList>

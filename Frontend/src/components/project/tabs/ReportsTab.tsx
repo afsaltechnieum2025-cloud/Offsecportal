@@ -59,13 +59,13 @@ function ReportCard({
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-base flex min-w-0 flex-wrap items-start gap-2">
           <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${c.iconBg}`}>
             <span className={c.iconText}>{icon}</span>
           </div>
-          {title}
+          <span className="min-w-0 flex-1 leading-tight">{title}</span>
           {comingSoon && (
-            <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border/40 tracking-wide">
+            <span className="ml-auto shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border/40 tracking-wide">
               SOON
             </span>
           )}
@@ -75,7 +75,7 @@ function ReportCard({
 
       <CardContent className="flex flex-col gap-3 flex-1 justify-between">
         {/* Finding count strip */}
-        <div className={`flex items-center gap-2 p-3 rounded-lg border ${c.stripBg}`}>
+        <div className={`flex flex-col gap-1.5 p-3 rounded-lg border sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 ${c.stripBg}`}>
           <span className="text-xs text-muted-foreground">{badgeLabel}:</span>
           <span className={`text-sm font-bold tabular-nums ${c.countText}`}>{badgeCount}</span>
           <span className="text-xs text-muted-foreground">
@@ -162,11 +162,11 @@ export default function ReportsTab({
       <Section title="Remediation">
         <Card className="flex flex-col md:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex min-w-0 flex-wrap items-start gap-2">
               <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${PRIMARY.iconBg}`}>
                 <RefreshCw className={`h-4 w-4 ${PRIMARY.iconText}`} />
               </div>
-              Retest Report
+              <span className="min-w-0 leading-tight">Retest Report</span>
             </CardTitle>
             <CardDescription className="text-xs leading-relaxed">
               Full remediation progress report — shows which findings are fixed, still open, or failed retest, with timeline and tester attribution.
@@ -175,7 +175,7 @@ export default function ReportsTab({
 
           <CardContent className="flex flex-col gap-3">
             {/* Stat strip */}
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
               <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                 <p className="text-xl font-bold tabular-nums text-green-400">{fixedCount}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Fixed</p>

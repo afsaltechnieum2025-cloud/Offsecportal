@@ -106,17 +106,20 @@ export default function ProjectDetail() {
   // ── Main render ──
   return (
     <DashboardLayout title={project.name} description={project.client}>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <Link to="/projects">
-          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-2" />Back to Projects</Button>
+          <Button variant="ghost" size="sm" className="-ml-2 sm:ml-0">
+            <ArrowLeft className="h-4 w-4 mr-2 shrink-0" />Back to Projects
+          </Button>
         </Link>
 
         {/* Status row */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {getStatusBadge(project.status)}
-          {(role === 'admin' || role === 'manager') && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {getStatusBadge(project.status)}
+            {(role === 'admin' || role === 'manager') && (
             <Select value={project.status || 'pending'} onValueChange={handleUpdateStatus} disabled={isUpdatingStatus}>
-              <SelectTrigger className="h-8 w-40 text-xs bg-secondary/50">
+              <SelectTrigger className="h-8 w-full min-w-0 text-xs bg-secondary/50 sm:w-40">
                 {isUpdatingStatus
                   ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Updating…</span>
                   : <SelectValue placeholder="Change status" />
@@ -129,31 +132,32 @@ export default function ProjectDetail() {
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
-          )}
-          <span className="text-muted-foreground text-sm">
+            )}
+          </div>
+          <span className="text-muted-foreground text-xs sm:text-sm break-words">
             {formatDate(project.start_date)} – {formatDate(project.end_date)}
           </span>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="findings">Findings ({findings.length})</TabsTrigger>
-            <TabsTrigger value="team">
+        {/* Tabs — horizontal scroll on narrow screens so triggers are not crushed */}
+        <Tabs defaultValue="overview" className="space-y-4 sm:space-y-6">
+          <TabsList className="bg-secondary/50 h-auto w-full max-w-full justify-start gap-1 overflow-x-auto overscroll-x-contain p-1 flex-nowrap [-webkit-overflow-scrolling:touch] sm:flex-wrap">
+            <TabsTrigger value="overview" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="findings" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">Findings ({findings.length})</TabsTrigger>
+            <TabsTrigger value="team" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">
               Team ({assignees.length > 0 ? assignees.length : (project?.assignees_count ?? 0)})
             </TabsTrigger>
             {(role === 'admin' || role === 'manager') && (
-              <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="reports" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">Reports</TabsTrigger>
             )}
-            <TabsTrigger value="checklist">
-              <CheckSquare className="h-3.5 w-3.5 mr-1" />Checklist
+            <TabsTrigger value="checklist" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">
+              <CheckSquare className="h-3.5 w-3.5 mr-1 shrink-0" />Checklist
             </TabsTrigger>
-            <TabsTrigger value="architecture">
-              <Network className="h-3.5 w-3.5 mr-1" />Architecture
+            <TabsTrigger value="architecture" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">
+              <Network className="h-3.5 w-3.5 mr-1 shrink-0" />Architecture
             </TabsTrigger>
-            <TabsTrigger value="logic-flow">
-              <GitBranch className="h-3.5 w-3.5 mr-1" />Logic & flow
+            <TabsTrigger value="logic-flow" className="shrink-0 px-2.5 text-xs sm:px-3 sm:text-sm">
+              <GitBranch className="h-3.5 w-3.5 mr-1 shrink-0" />Logic & flow
             </TabsTrigger>
           </TabsList>
 

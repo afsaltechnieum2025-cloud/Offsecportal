@@ -84,11 +84,11 @@ export default function ChecklistTab({ clProgress, clSaving, checklistDetails, g
                 value={section.category}
                 className="rounded-lg border border-yellow-500/20 bg-secondary/15 overflow-hidden data-[state=open]:border-yellow-500/35 data-[state=open]:bg-secondary/25"
               >
-                <AccordionTrigger className="hover:no-underline px-4 py-3">
-                  <div className="flex items-center justify-between w-full gap-3 pr-2">
-                    <div className="flex items-center gap-2 min-w-0 text-left">
+                <AccordionTrigger className="hover:no-underline px-3 py-3 sm:px-4">
+                  <div className="flex w-full flex-col gap-2 pr-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <div className="flex min-w-0 items-center gap-2 text-left">
                       <span className="text-base shrink-0">{section.icon}</span>
-                      <span className="font-medium text-foreground truncate">{section.category}</span>
+                      <span className="truncate font-medium text-foreground">{section.category}</span>
                       {complete && (
                         <Badge
                           variant="outline"
@@ -98,14 +98,14 @@ export default function ChecklistTab({ clProgress, clSaving, checklistDetails, g
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="w-24 h-2 rounded-full overflow-hidden bg-secondary/60 border border-yellow-500/15">
+                    <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                      <div className="h-2 min-w-[5rem] flex-1 rounded-full overflow-hidden border border-yellow-500/15 bg-secondary/60 sm:w-24 sm:flex-none">
                         <div
                           className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-300"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground w-11 text-right tabular-nums">
+                      <span className="w-11 text-right text-xs tabular-nums text-muted-foreground">
                         {done}/{section.items.length}
                       </span>
                     </div>
@@ -184,14 +184,14 @@ export default function ChecklistTab({ clProgress, clSaving, checklistDetails, g
       </CardHeader>
       <CardContent>
         <Tabs value={activeChecklistTab} onValueChange={v => setActiveChecklistTab(v as CLType)} className="w-full">
-          <TabsList className="bg-secondary/50 h-auto flex-wrap gap-1 p-1 w-full sm:w-fit justify-start">
+          <TabsList className="bg-secondary/50 h-auto w-full max-w-full justify-start gap-1 overflow-x-auto overscroll-x-contain p-1 flex-nowrap [-webkit-overflow-scrolling:touch] sm:w-fit sm:flex-wrap">
             {checklistTabs.map(({ type, label, icon, data }) => {
               const { pct } = tabProgress(type, data);
               return (
                 <TabsTrigger
                   key={type}
                   value={type}
-                  className="group gap-1.5 data-[state=active]:text-primary"
+                  className="group shrink-0 gap-1.5 px-2.5 text-xs data-[state=active]:text-primary sm:px-3 sm:text-sm"
                 >
                   {icon}
                   {label}

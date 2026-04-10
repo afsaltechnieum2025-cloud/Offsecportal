@@ -111,9 +111,9 @@ export default function FindingCard({
     <Card className="animate-fade-in overflow-hidden" style={{ animationDelay: `${index * 30}ms` }}>
       {/* ── Header row (always visible) ── */}
       <div className="p-4 cursor-pointer" onClick={onToggleExpand}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {getSeverityBadge(finding.severity)}
               {finding.cvss_score && <span className="text-sm font-mono text-muted-foreground">CVSS {finding.cvss_score}</span>}
               <Badge variant="secondary" className="text-xs hidden sm:inline-flex">{projectName}</Badge>
@@ -141,15 +141,19 @@ export default function FindingCard({
             <h3 className="font-semibold mt-2">{finding.title}</h3>
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{finding.description}</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Badge variant={finding.status === 'Open' ? 'destructive' : 'secondary'}>{finding.status}</Badge>
-            {finding.retest_status && getRetestBadge(finding.retest_status)}
-            {canDelete && (
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(finding.id); }}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            )}
-            {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+          <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={finding.status === 'Open' ? 'destructive' : 'secondary'}>{finding.status}</Badge>
+              {finding.retest_status && getRetestBadge(finding.retest_status)}
+            </div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              {canDelete && (
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(finding.id); }}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
+              {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+            </div>
           </div>
         </div>
       </div>

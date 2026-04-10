@@ -335,7 +335,7 @@ export default function ArchitectureTab({
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             className={cn(
-              'rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all',
+              'rounded-xl border-2 border-dashed p-4 text-center cursor-pointer transition-all sm:p-8',
               dragOver || fileName ? 'border-primary/50 bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/30 hover:bg-muted/30',
             )}
           >
@@ -404,9 +404,9 @@ export default function ArchitectureTab({
           </div>
 
           <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'map' | 'table')}>
-            <TabsList className="bg-secondary/50 h-auto flex-wrap gap-1 p-1">
-              <TabsTrigger value="map" className="gap-1.5 data-[state=active]:text-primary"><Map className="h-3.5 w-3.5" />Flow Map</TabsTrigger>
-              <TabsTrigger value="table" className="gap-1.5 data-[state=active]:text-primary"><Table2 className="h-3.5 w-3.5" />Inventory</TabsTrigger>
+            <TabsList className="bg-secondary/50 h-auto w-full max-w-full justify-start gap-1 overflow-x-auto overscroll-x-contain p-1 flex-nowrap [-webkit-overflow-scrolling:touch] sm:w-fit sm:flex-wrap">
+              <TabsTrigger value="map" className="shrink-0 gap-1.5 px-2.5 text-xs data-[state=active]:text-primary sm:px-3 sm:text-sm"><Map className="h-3.5 w-3.5 shrink-0" />Flow Map</TabsTrigger>
+              <TabsTrigger value="table" className="shrink-0 gap-1.5 px-2.5 text-xs data-[state=active]:text-primary sm:px-3 sm:text-sm"><Table2 className="h-3.5 w-3.5 shrink-0" />Inventory</TabsTrigger>
             </TabsList>
 
             {showAddForm && (

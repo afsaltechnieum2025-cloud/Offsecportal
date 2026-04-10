@@ -85,7 +85,7 @@ export default function OverviewTab({
   return (
     <div className="space-y-4">
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
         {hasTimeline && (
           <Card className="border-orange-500/15 bg-card/80">
@@ -95,11 +95,11 @@ export default function OverviewTab({
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-[11px] text-muted-foreground leading-snug sm:text-xs break-words">
                   {new Date(project.start_date!).toLocaleDateString()} → {new Date(project.end_date!).toLocaleDateString()}
                 </span>
-                <span className={cn('text-xs font-semibold', isOver ? 'text-orange-400' : 'text-primary')}>
+                <span className={cn('text-xs font-semibold shrink-0', isOver ? 'text-orange-400' : 'text-primary')}>
                   {isOver ? 'Overdue' : `${daysLeft}d left`}
                 </span>
               </div>
@@ -116,7 +116,7 @@ export default function OverviewTab({
                 <span className="text-xs font-bold text-primary">{pct}% complete</span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-3">
                 {[
                   { label: 'Status',  value: project.status ?? '—' },
                   { label: 'Code',    value: project.project_code ?? '—' },
@@ -132,7 +132,7 @@ export default function OverviewTab({
           </Card>
         )}
 
-        <Card className={cn('border-orange-500/15 bg-card/80', !hasTimeline && 'col-span-2')}>
+        <Card className={cn('border-orange-500/15 bg-card/80', !hasTimeline && 'md:col-span-2')}>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm flex items-center gap-2">
               <Bug className="h-4 w-4 text-primary" />Findings Overview
@@ -173,7 +173,7 @@ export default function OverviewTab({
         </CardHeader>
         <CardContent className="space-y-5">
 
-          <div className="grid grid-cols-3 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
             {[
               { label: 'Client',       value: project.client || '—' },
               { label: 'Project Name', value: project.name },
@@ -221,7 +221,7 @@ export default function OverviewTab({
             {project.domain ? (
               <OrangeAccentBlock>
                 <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-primary shrink-0" />
+                  {/* <Globe className="h-4 w-4 text-primary shrink-0" /> */}
                   <span className="font-mono text-sm text-orange-100/90">{project.domain}</span>
                 </div>
               </OrangeAccentBlock>
@@ -242,7 +242,7 @@ export default function OverviewTab({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
         <Card className="border-orange-500/15 bg-card/80">
           <CardHeader className="pb-3">
@@ -308,7 +308,7 @@ export default function OverviewTab({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
         <Card className="border-orange-500/15 bg-card/80">
           <CardHeader className="pb-3">
@@ -327,11 +327,13 @@ export default function OverviewTab({
 
         <Card className="border-orange-500/15 bg-card/80">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-primary" />Testing Credentials
+            <CardTitle className="text-base flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+              <span className="flex items-center gap-2 min-w-0">
+                <KeyRound className="h-4 w-4 shrink-0 text-primary" />Testing Credentials
+              </span>
               <button
                 onClick={() => setShowCreds(v => !v)}
-                className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors sm:ml-auto"
               >
                 <Lock className="h-3 w-3" />
                 {showCreds ? (
@@ -385,7 +387,7 @@ export default function OverviewTab({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
                 <div className="p-3 rounded-lg bg-yellow-500/15 border border-yellow-400/35">
                   <p className="text-2xl font-bold text-yellow-300">{fixed}</p>
                   <p className="text-xs text-orange-100/70 mt-0.5">Fixed</p>
