@@ -10,6 +10,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    headers: {
+      // Dev: avoid the browser reusing a stale index/module graph after edits (loader flashes old UI).
+      "Cache-Control": "no-store",
+    },
   },
   plugins: [
     react(),
