@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search, ShieldCheck, ShieldX, Package, Radar, Info, ListChecks, Trash2, KeyRound, Bug, Shield, Cpu, Brain, AlertTriangle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Plus, Search, ShieldCheck, ShieldX, Info, ListChecks, Trash2, Bug, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { YellowAccentBlock, OrangeAccentBlock, SectionHeading } from '@/components/project/accent-blocks';
 import { cn } from '@/lib/utils';
-import { normalizeSeverity, findingTypeConfig } from '@/utils/severityHelpers';
+import {
+  normalizeSeverity,
+  findingTypeConfig,
+  SCA_LUCIDE_ICON,
+  TOIP_LUCIDE_ICON,
+} from '@/utils/severityHelpers';
 import { authHeaders } from '@/hooks/useProjectData';
 import FindingCard from '../findings/FindingCard';
 import AddFindingDialog from '../findings/AddFindingDialog';
@@ -22,29 +28,21 @@ import { TOIP_TEST_CASE_TEMPLATES, type ToipTestCase, type ToipStatus } from '@/
 
 // ─── Tab display configs ──────────────────────────────────────────────────────
 
-const SCA_CONFIG = {
+const SCA_TAB_CONFIG = {
   label: 'SCA',
-  icon: <Package className="h-4 w-4" />,
+  Icon: SCA_LUCIDE_ICON,
   color: 'text-orange-400',
   bgColor: 'bg-orange-500/10',
   borderColor: 'border-orange-500/20',
-};
+} as const;
 
-const TOIP_CONFIG = {
+const TOIP_TAB_CONFIG = {
   label: 'TOIP',
-  icon: <Radar className="h-4 w-4" />,
+  Icon: TOIP_LUCIDE_ICON,
   color: 'text-orange-400',
   bgColor: 'bg-orange-500/10',
   borderColor: 'border-orange-500/20',
-};
-
-const SECRET_CONFIG = {
-  label: 'Secret',
-  icon: <KeyRound className="h-4 w-4" />,
-  color: 'text-amber-400',
-  bgColor: 'bg-amber-500/10',
-  borderColor: 'border-amber-500/20',
-};
+} as const;
 
 /** Tab count pills — same palette as TOIP */
 const TAB_COUNT_BADGE_CLASS = 'ml-1 px-1.5 py-0.5 rounded-full text-xs bg-orange-500/10 text-orange-400 font-semibold tabular-nums';
@@ -66,36 +64,36 @@ function StatSeverityIcon({ sev }: { sev: Severity }) {
 
 // ─── Per-type banner copy (layout matches TOIP OrangeAccentBlock) ─────────────
 
-const TAB_BANNERS: Record<string, { title: string; description: string; icon: React.ReactNode }> = {
+const TAB_BANNERS: Record<string, { title: string; description: string; Icon: LucideIcon }> = {
   pentest: {
     title: 'Penetration Testing',
     description: 'Manual findings from black-box, grey-box, and white-box engagements. Document vulnerabilities, steps to reproduce, and remediation guidance.',
-    icon: <Bug className="h-5 w-5" />,
+    Icon: findingTypeConfig.pentest.Icon,
   },
   sast: {
     title: 'Static Application Security Testing',
     description: 'Findings from automated source-code analysis. Covers injection flaws, insecure patterns, and code-level misconfigurations.',
-    icon: <Shield className="h-5 w-5" />,
+    Icon: findingTypeConfig.sast.Icon,
   },
   asm: {
     title: 'Attack Surface Management',
     description: 'Exposed assets, open ports, misconfigured services, and internet-facing risks discovered through continuous asset enumeration.',
-    icon: <Cpu className="h-5 w-5" />,
+    Icon: findingTypeConfig.asm.Icon,
   },
   llm: {
     title: 'LLM / AI Security',
     description: 'Prompt injection, jailbreaks, model inversion, and AI-specific risks found during large-language-model assessments.',
-    icon: <Brain className="h-5 w-5" />,
+    Icon: findingTypeConfig.llm.Icon,
   },
   sca: {
     title: 'Software Composition Analysis',
     description: 'Track open-source dependency vulnerabilities, outdated packages, and license risks.',
-    icon: <Package className="h-5 w-5" />,
+    Icon: SCA_LUCIDE_ICON,
   },
   secret: {
     title: 'Secret & Credential Exposure',
     description: 'Track exposed API keys, tokens, passwords, and other sensitive credentials found during the assessment.',
-    icon: <KeyRound className="h-5 w-5" />,
+    Icon: findingTypeConfig.secret.Icon,
   },
 };
 
@@ -218,11 +216,13 @@ export default function FindingsTab({
   const renderFindingsList = (
     type: FindingType,
     bannerKey?: string,
-    displayConfig?: { label: string; icon: React.ReactNode; bgColor: string; color: string; borderColor: string }
+    displayConfig?: { label: string; Icon: LucideIcon; bgColor: string; color: string; borderColor: string }
   ) => {
     const typeFindings = filteredFindingsByType(type);
     const config       = displayConfig ?? findingTypeConfig[type];
     const banner       = bannerKey ? TAB_BANNERS[bannerKey] : null;
+    const ListIcon     = config.Icon;
+    const BannerIcon   = banner?.Icon;
 
     const totalForType = getFindingsByType(type).length;
 
@@ -230,12 +230,12 @@ export default function FindingsTab({
       <div className="space-y-4">
 
         {/* ── Flag banner — same OrangeAccentBlock + gradient icon treatment as TOIP ── */}
-        {banner && (
+        {banner && BannerIcon && (
           <OrangeAccentBlock>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
-                  {banner.icon}
+                  <BannerIcon className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="font-semibold text-orange-100/95 text-sm">{banner.title}</p>
@@ -324,7 +324,7 @@ export default function FindingsTab({
         {typeFindings.length === 0 && (
           <Card className="p-12 text-center">
             <div className="flex flex-col items-center gap-2">
-              {config.icon}
+              <ListIcon className="h-10 w-10 text-muted-foreground" />
               <p className="text-lg font-medium">No {config.label} findings yet</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Start documenting {config.label.toLowerCase()} vulnerabilities found during the assessment
@@ -380,7 +380,7 @@ export default function FindingsTab({
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-md">
-                <Radar className="h-5 w-5" />
+                <TOIP_LUCIDE_ICON className="h-5 w-5" />
               </div>
               <div>
                 <p className="font-semibold text-orange-100/95 text-sm">Technieum OffSec Intelligence Portal</p>
@@ -463,7 +463,7 @@ export default function FindingsTab({
 
         {Object.keys(groupedFiltered).length === 0 ? (
           <YellowAccentBlock contentClassName="pl-4 pr-4 text-center py-8">
-            <Radar className="h-10 w-10 mx-auto mb-3 text-primary/80" />
+            <TOIP_LUCIDE_ICON className="h-10 w-10 mx-auto mb-3 text-primary/80" />
             <p className="text-sm font-medium text-orange-100/90">No test cases match your filters</p>
             <p className="text-xs text-orange-100/65 mt-1">Clear filters or add a new test case above</p>
           </YellowAccentBlock>
@@ -568,6 +568,9 @@ export default function FindingsTab({
   // ─── Counts ───────────────────────────────────────────────────────────────
   const scaCount    = getFindingsByType('sast').length;
   const secretCount = getFindingsByType('secret').length;
+  const SecretTabIcon = findingTypeConfig.secret.Icon;
+  const ScaTabIcon = SCA_TAB_CONFIG.Icon;
+  const ToipTabIcon = TOIP_TAB_CONFIG.Icon;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -578,10 +581,11 @@ export default function FindingsTab({
           {/* Standard finding type tabs */}
           {(['pentest', 'sast', 'asm', 'llm'] as FindingType[]).map(type => {
             const config = findingTypeConfig[type];
+            const TabTypeIcon = config.Icon;
             const count  = getFindingsByType(type).length;
             return (
               <TabsTrigger key={type} value={type} className="flex items-center gap-2 text-sm">
-                {config.icon}{config.label}
+                <TabTypeIcon className="h-4 w-4 shrink-0" />{config.label}
                 <span className={TAB_COUNT_BADGE_CLASS}>{count}</span>
               </TabsTrigger>
             );
@@ -589,19 +593,19 @@ export default function FindingsTab({
 
           {/* SCA tab */}
           <TabsTrigger value="sca" className="flex items-center gap-2 text-sm">
-            {SCA_CONFIG.icon}{SCA_CONFIG.label}
+            <ScaTabIcon className="h-4 w-4 shrink-0" />{SCA_TAB_CONFIG.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{scaCount}</span>
           </TabsTrigger>
 
           {/* Secret tab */}
           <TabsTrigger value="secret" className="flex items-center gap-2 text-sm">
-            {SECRET_CONFIG.icon}{SECRET_CONFIG.label}
+            <SecretTabIcon className="h-4 w-4 shrink-0" />{findingTypeConfig.secret.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{secretCount}</span>
           </TabsTrigger>
 
           {/* TOIP tab */}
           <TabsTrigger value="toip" className="flex items-center gap-2 text-sm">
-            {TOIP_CONFIG.icon}{TOIP_CONFIG.label}
+            <ToipTabIcon className="h-4 w-4 shrink-0" />{TOIP_TAB_CONFIG.label}
             <span className={TAB_COUNT_BADGE_CLASS}>{toipTestCases.length}</span>
           </TabsTrigger>
         </TabsList>
@@ -614,12 +618,18 @@ export default function FindingsTab({
 
         {/* ── SCA tab (same banner pattern as other sections) ── */}
         <TabsContent value="sca" className="space-y-4 mt-0">
-          {renderFindingsList('sast', 'sca', SCA_CONFIG)}
+          {renderFindingsList('sast', 'sca', {
+            label: SCA_TAB_CONFIG.label,
+            Icon: SCA_TAB_CONFIG.Icon,
+            color: SCA_TAB_CONFIG.color,
+            bgColor: SCA_TAB_CONFIG.bgColor,
+            borderColor: SCA_TAB_CONFIG.borderColor,
+          })}
         </TabsContent>
 
         {/* ── Secret tab ── */}
         <TabsContent value="secret" className="space-y-4 mt-0">
-          {renderFindingsList('secret', 'secret', SECRET_CONFIG)}
+          {renderFindingsList('secret', 'secret')}
         </TabsContent>
 
         {/* ── TOIP ── */}

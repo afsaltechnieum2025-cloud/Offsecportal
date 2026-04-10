@@ -1,12 +1,12 @@
-import { useState, cloneElement, isValidElement, type ReactElement } from 'react';
+import { useState } from 'react';
 import {
   Bug, FileText, Globe, Server, RefreshCw, CheckSquare,
   AlertTriangle, Hash, Crosshair, Calendar, KeyRound,
   GitBranch, Network, ShieldCheck, BookOpen, Layers,
-  ChevronDown, ChevronUp, Lock, Package,
+  ChevronDown, ChevronUp, Lock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { normalizeSeverity, findingTypeConfig } from '@/utils/severityHelpers';
+import { normalizeSeverity, findingTypeConfig, FindingOverviewTypeIcon } from '@/utils/severityHelpers';
 import { YellowAccentBlock, OrangeAccentBlock, SectionHeading } from '@/components/project/accent-blocks';
 import { cn } from '@/lib/utils';
 import type { Project, Finding, FindingPoc, Assignee, FindingType } from '@/utils/projectTypes';
@@ -39,14 +39,7 @@ const FINDING_OVERVIEW_TYPES: { key: FindingType | 'sca'; label: string }[] = [
 ];
 
 function typeRowIcon(key: FindingType | 'sca') {
-  if (key === 'sca') return <Package className="h-3.5 w-3.5 text-primary-foreground" />;
-  const node = findingTypeConfig[key as FindingType].icon;
-  if (isValidElement(node)) {
-    return cloneElement(node as ReactElement<{ className?: string }>, {
-      className: 'h-3.5 w-3.5 text-primary-foreground',
-    });
-  }
-  return node;
+  return <FindingOverviewTypeIcon type={key} className="h-3.5 w-3.5 text-primary-foreground" />;
 }
 
 const accentBodyClass = 'text-sm leading-relaxed whitespace-pre-wrap text-orange-100/90';

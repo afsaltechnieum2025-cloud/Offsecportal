@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, CheckSquare, Cloud, Globe, ListChecks, Loader2, Plug } from 'lucide-react';
+import { CheckSquare, Cloud, Globe, ListChecks, Loader2, Plug } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +10,9 @@ import type { ChecklistSection } from '@/data/Checklistdata';
 import type { CLType } from '@/utils/projectTypes';
 import { YellowAccentBlock, SectionHeading } from '@/components/project/accent-blocks';
 import { cn } from '@/lib/utils';
+import { findingTypeConfig } from '@/utils/severityHelpers';
+
+const LlmChecklistIcon = findingTypeConfig.llm.Icon;
 
 type Props = {
   clProgress: Record<string, Record<string, boolean>>;
@@ -23,7 +26,7 @@ const checklistTabs: { type: CLType; label: string; icon: React.ReactNode; data:
   { type: 'web', label: 'Web', icon: <Globe className="h-3.5 w-3.5 shrink-0" />, data: webChecklist },
   { type: 'api', label: 'API', icon: <Plug className="h-3.5 w-3.5 shrink-0" />, data: apiChecklist },
   { type: 'cloud', label: 'Cloud', icon: <Cloud className="h-3.5 w-3.5 shrink-0" />, data: cloudChecklist },
-  { type: 'aiLlm', label: 'AI/LLM', icon: <Brain className="h-3.5 w-3.5 shrink-0" />, data: aiLlmChecklist },
+  { type: 'aiLlm', label: 'AI/LLM', icon: <LlmChecklistIcon className="h-3.5 w-3.5 shrink-0" />, data: aiLlmChecklist },
 ];
 
 const checklistTitles: Record<CLType, { title: string; subtitle: string }> = {

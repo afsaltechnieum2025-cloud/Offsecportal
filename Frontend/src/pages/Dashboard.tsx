@@ -15,10 +15,10 @@ import {
   Download,
   Eye,
   FileText,
-  Network,
   ShieldCheck,
   Globe,
   Brain,
+  Bot,
   Shield,
 } from 'lucide-react';
 import {
@@ -727,10 +727,10 @@ export default function Dashboard() {
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {[
-                { title: 'TOIP', subtitle: 'Offsec Intelligence Portal', icon: Network, docKey: 'TOIP' },
+                { title: 'TOIP', subtitle: 'Offsec Intelligence Portal', icon: Brain, docKey: 'TOIP' },
                 { title: 'SAST', subtitle: 'Static App Security Testing', icon: ShieldCheck, docKey: 'SAST' },
                 { title: 'ASM', subtitle: 'Attack Surface Management', icon: Globe, docKey: 'ASM' },
-                { title: 'LLM Suite', subtitle: 'LLM Penetration Testing', icon: Brain, docKey: 'LLM' },
+                { title: 'LLM Suite', subtitle: 'LLM Penetration Testing', icon: Bot, docKey: 'LLM' },
                 { title: 'AD Suite', subtitle: 'Active Directory Pentesting', icon: Shield, docKey: 'AD' },
               ].map((doc, index) => {
                 const Icon = doc.icon;

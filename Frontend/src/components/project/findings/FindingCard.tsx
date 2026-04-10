@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { ChevronDown, ChevronUp, Upload, X, RefreshCw, Trash2, Image as ImageIcon, Terminal, Zap, Brain } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, X, RefreshCw, Trash2, Image as ImageIcon, Terminal, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +79,7 @@ export default function FindingCard({
   const canDelete = !!userId && finding.created_by === userId;
   const findingType = (finding.finding_type || 'pentest') as FindingType;
   const typeConfig = findingTypeConfig[findingType];
+  const LlmCategoryIcon = findingTypeConfig.llm.Icon;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -133,7 +134,7 @@ export default function FindingCard({
               )}
               {finding.finding_type === 'llm' && finding.llm_category && (
                 <Badge variant="outline" className={`text-xs ${findingTypeConfig.llm.bgColor} ${findingTypeConfig.llm.color} ${findingTypeConfig.llm.borderColor}`}>
-                  <Brain className="h-3 w-3 mr-1" />{finding.llm_category}
+                  <LlmCategoryIcon className="h-3 w-3 mr-1" />{finding.llm_category}
                 </Badge>
               )}
             </div>

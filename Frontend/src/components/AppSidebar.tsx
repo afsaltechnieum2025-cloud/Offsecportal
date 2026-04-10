@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Globe,
   Brain,
-  Network,
+  Bot,
   ShieldCheck,
   Menu,
   Trophy,
@@ -45,8 +45,8 @@ const navigation = [
   { name: 'Trending', href: '/trending', icon: TrendingUp, roles: ['admin', 'manager', 'tester'] },
   { name: 'Users', href: '/users', icon: Users, roles: ['admin', 'manager'] },
   { name: 'ASM', href: '/asm', icon: Globe, roles: ['admin', 'manager', 'tester'] },
-  { name: 'LLM Suite', href: '/llm', icon: Brain, roles: ['admin', 'manager', 'tester'] },
-  { name: 'TOIP', href: '/toip', icon: Network, roles: ['admin', 'manager', 'tester'] },
+  { name: 'LLM Suite', href: '/llm', icon: Bot, roles: ['admin', 'manager', 'tester'] },
+  { name: 'TOIP', href: '/toip', icon: Brain, roles: ['admin', 'manager', 'tester'] },
   { name: 'SAST', href: '/sast', icon: ShieldCheck, roles: ['admin', 'manager', 'tester'] },
 ];
 

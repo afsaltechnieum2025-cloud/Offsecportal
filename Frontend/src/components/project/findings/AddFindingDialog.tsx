@@ -119,12 +119,14 @@ export default function AddFindingDialog({ open, onClose, projectId, projectName
     }
   };
 
+  const TypeIcon = findingTypeConfig[findingType].Icon;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {findingTypeConfig[findingType].icon}
+            <TypeIcon className="h-5 w-5 shrink-0" />
             Add {findingTypeConfig[findingType].label} Finding
           </DialogTitle>
         </DialogHeader>

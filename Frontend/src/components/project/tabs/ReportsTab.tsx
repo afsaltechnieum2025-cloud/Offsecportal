@@ -1,7 +1,13 @@
-import { FileText, Download, RefreshCw, Shield, Cpu, Brain, Package, Radar, KeyRound } from 'lucide-react';
+import { FileText, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Finding, FindingType } from '@/utils/projectTypes';
+import { findingTypeConfig, SCA_LUCIDE_ICON, TOIP_LUCIDE_ICON } from '@/utils/severityHelpers';
+
+const SastReportIcon = findingTypeConfig.sast.Icon;
+const AsmReportIcon = findingTypeConfig.asm.Icon;
+const LlmReportIcon = findingTypeConfig.llm.Icon;
+const SecretReportIcon = findingTypeConfig.secret.Icon;
 
 // ─── Shared primary color classes ─────────────────────────────────────────────
 
@@ -200,7 +206,7 @@ export default function ReportsTab({
       {/* ── Code Analysis ── */}
       <Section title="Code Analysis">
         <ReportCard
-          icon={<Shield className="h-4 w-4" />}
+          icon={<SastReportIcon className="h-4 w-4" />}
           title="SAST Report"
           description="Static Application Security Testing — code-level vulnerability report with file paths, line numbers, tool attribution, and CWE mappings."
           badgeLabel="SAST findings"
@@ -210,7 +216,7 @@ export default function ReportsTab({
           onClick={onGenerateSast}
         />
         <ReportCard
-          icon={<Package className="h-4 w-4" />}
+          icon={<SCA_LUCIDE_ICON className="h-4 w-4" />}
           title="SCA Report"
           description="Software Composition Analysis — open-source dependency vulnerabilities, outdated packages, CVE mappings, and license compliance issues."
           badgeLabel="SCA findings"
@@ -225,7 +231,7 @@ export default function ReportsTab({
       <Section title="Secrets Detection">
         <div className="md:col-span-2">
           <ReportCard
-            icon={<KeyRound className="h-4 w-4" />}
+            icon={<SecretReportIcon className="h-4 w-4" />}
             title="Secret Detection Report"
             description="Credential and secret scanning — exposed API keys, tokens, certificates, passwords in code and configuration, with remediation guidance aligned to your secret findings."
             badgeLabel="Secret findings"
@@ -240,7 +246,7 @@ export default function ReportsTab({
       {/* ── Attack Surface ── */}
       <Section title="Attack Surface">
         <ReportCard
-          icon={<Cpu className="h-4 w-4" />}
+          icon={<AsmReportIcon className="h-4 w-4" />}
           title="ASM Report"
           description="Attack Surface Management — exposed assets, open ports, service enumeration, cloud misconfigurations, and external attack surface overview."
           badgeLabel="ASM findings"
@@ -250,7 +256,7 @@ export default function ReportsTab({
           onClick={onGenerateAsm}
         />
         <ReportCard
-          icon={<Radar className="h-4 w-4" />}
+          icon={<TOIP_LUCIDE_ICON className="h-4 w-4" />}
           title="TOIP Report"
           description="Technieum OffSec Intelligence Portal — exports all test cases with Assessment Result: Secure, Not Secure, or N/A when not yet marked. Grouped by category in a Word document."
           badgeLabel="Test cases"
@@ -264,7 +270,7 @@ export default function ReportsTab({
       {/* ── AI Security ── */}
       <Section title="AI Security">
         <ReportCard
-          icon={<Brain className="h-4 w-4" />}
+          icon={<LlmReportIcon className="h-4 w-4" />}
           title="LLM Security Report"
           description="AI/LLM-specific vulnerability assessment — prompt injection, jailbreaks, data exfiltration, excessive agency, RAG poisoning, and model abuse vectors."
           badgeLabel="LLM findings"

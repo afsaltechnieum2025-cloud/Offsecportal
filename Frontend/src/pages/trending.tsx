@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import {
   Search, Plus, ExternalLink, ImageIcon, X, FileText, Pencil, Trash2,
-  Cloud, Shield, Brain, Network, Globe, Cpu, Layers, Bot, Package,
+  Cloud, ShieldCheck, Brain, Globe, Layers, Bot, Package, Tag, Sparkles,
 } from 'lucide-react';
 import { API } from '@/utils/api';
 const TRENDING_API = `${API}/trending`;
@@ -37,13 +37,13 @@ const CATEGORIES = [
   { key: 'all',                  label: 'All',                 icon: Layers,  color: 'text-muted-foreground'  },
   { key: 'aws',                  label: 'Cloud (AWS)',          icon: Cloud,   color: 'text-orange-400'        },
   { key: 'azure',                label: 'Cloud (Azure)',        icon: Cloud,   color: 'text-sky-400'           },
-  { key: 'sast',                 label: 'SAST',                 icon: Shield,  color: 'text-green-400'         },
-  { key: 'llm',                  label: 'LLM',                  icon: Brain,   color: 'text-purple-400'        },
-  { key: 'toip',                 label: 'TOIP',                 icon: Network, color: 'text-blue-400'          },
-  { key: 'asm',                  label: 'ASM',                  icon: Cpu,     color: 'text-red-400'           },
-  { key: 'ai_pentest',           label: 'AI Pentest',           icon: Bot,     color: 'text-pink-400'          },
+  { key: 'sast',                 label: 'SAST',                 icon: ShieldCheck, color: 'text-green-400'         },
+  { key: 'llm',                  label: 'LLM',                  icon: Bot,     color: 'text-purple-400'        },
+  { key: 'toip',                 label: 'TOIP',                 icon: Brain,   color: 'text-blue-400'          },
+  { key: 'asm',                  label: 'ASM',                  icon: Globe,   color: 'text-red-400'           },
+  { key: 'ai_pentest',           label: 'AI Pentest',           icon: Sparkles, color: 'text-pink-400'          },
   { key: 'technieum_products',   label: 'Technieum Products',   icon: Package, color: 'text-primary'           },
-  { key: 'others',               label: 'Others',               icon: Globe,   color: 'text-yellow-400'        },
+  { key: 'others',               label: 'Others',               icon: Tag,     color: 'text-yellow-400'        },
 ] as const;
 
 type CategoryKey = typeof CATEGORIES[number]['key'];

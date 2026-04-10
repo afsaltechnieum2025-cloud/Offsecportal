@@ -1,6 +1,31 @@
 import React from 'react';
-import { Bug, Shield, Cpu, Brain, AlertTriangle,KeyRound  } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Bug, ShieldCheck, Globe, Brain, Bot, AlertTriangle, KeyRound, Package } from 'lucide-react';
 import type { Severity, FindingType } from './projectTypes';
+
+/** Canonical icons for product areas — use app-wide (sidebar, reports, findings, trending, etc.) */
+export const FINDING_TYPE_LUCIDE: Record<FindingType, LucideIcon> = {
+  pentest: Bug,
+  sast: ShieldCheck,
+  asm: Globe,
+  llm: Bot,
+  secret: KeyRound,
+};
+
+export const SCA_LUCIDE_ICON: LucideIcon = Package;
+/** TOIP / intelligence portal — distinct from LLM findings (`Bot`) */
+export const TOIP_LUCIDE_ICON: LucideIcon = Brain;
+
+export function FindingTypeLucideIcon({ type, className = 'h-4 w-4' }: { type: FindingType; className?: string }) {
+  const Icon = FINDING_TYPE_LUCIDE[type];
+  return <Icon className={className} />;
+}
+
+/** Overview / tabs: finding types plus SCA (Package); TOIP uses `TOIP_LUCIDE_ICON` (`Brain`) */
+export function FindingOverviewTypeIcon({ type, className = 'h-4 w-4' }: { type: FindingType | 'sca'; className?: string }) {
+  const Icon = type === 'sca' ? SCA_LUCIDE_ICON : FINDING_TYPE_LUCIDE[type];
+  return <Icon className={className} />;
+}
 
 // ─── Severity helpers ─────────────────────────────────────────────────────────
 
@@ -65,34 +90,34 @@ export const getRetestBadge = (status: string | null | undefined) => {
 
 export const findingTypeConfig: Record<FindingType, {
   label: string;
-  icon: React.ReactNode;
+  Icon: LucideIcon;
   color: string;
   bgColor: string;
   borderColor: string;
   fields: string[];
 }> = {
   pentest: {
-    label: 'Pentest', icon: <Bug className="h-4 w-4" />, color: 'text-primary',
+    label: 'Pentest', Icon: FINDING_TYPE_LUCIDE.pentest, color: 'text-primary',
     bgColor: 'bg-primary/10', borderColor: 'border-primary/20',
     fields: ['severity', 'cvss_score', 'cwe_id', 'affected_component', 'steps_to_reproduce', 'impact', 'remediation'],
   },
   sast: {
-    label: 'SAST', icon: <Shield className="h-4 w-4" />, color: 'text-orange-500',
+    label: 'SAST', Icon: FINDING_TYPE_LUCIDE.sast, color: 'text-orange-500',
     bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20',
     fields: ['severity', 'file_path', 'line_number', 'tool_name', 'cwe_id', 'remediation'],
   },
   asm: {
-    label: 'ASM', icon: <Cpu className="h-4 w-4" />, color: 'text-yellow-500',
+    label: 'ASM', Icon: FINDING_TYPE_LUCIDE.asm, color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/20',
     fields: ['severity', 'asset_type', 'port', 'protocol', 'remediation'],
   },
   llm: {
-    label: 'LLM/AI', icon: <Brain className="h-4 w-4" />, color: 'text-green-500',
+    label: 'LLM/AI', Icon: FINDING_TYPE_LUCIDE.llm, color: 'text-green-500',
     bgColor: 'bg-green-500/10', borderColor: 'border-green-500/20',
     fields: ['severity', 'llm_category', 'prompt_example', 'impact', 'remediation'],
   },
   secret: {
-    label: 'Secret', icon: <KeyRound className="h-4 w-4" />, color: 'text-amber-400',
+    label: 'Secret', Icon: FINDING_TYPE_LUCIDE.secret, color: 'text-amber-400',
     bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20',
     fields: ['severity', 'affected_component', 'tool_name', 'file_path', 'description', 'remediation'],
   },
