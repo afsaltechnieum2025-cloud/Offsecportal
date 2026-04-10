@@ -235,7 +235,10 @@ router.patch('/:id', requireAuth, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT created_by FROM findings WHERE id = ?', [req.params.id]);
+    const [rows] = await db.query(
+      'SELECT created_by, title, project_id, finding_type FROM findings WHERE id = ?',
+      [req.params.id]
+    );
     if (rows.length === 0) return res.status(404).json({ message: 'Finding not found' });
 
     const isAdminOrManager = ['admin', 'manager'].includes(req.user.role);
@@ -245,9 +248,15 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: You can only delete your own findings' });
     }
 
+    const row = rows[0];
     const [result] = await db.query('DELETE FROM findings WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Finding not found' });
-    res.json({ message: 'Finding deleted successfully' });
+    res.json({
+      message: 'Finding deleted successfully',
+      title: row.title,
+      project_id: row.project_id,
+      finding_type: row.finding_type,
+    });
   } catch (err) {
     console.error('DELETE /api/findings/:id error:', err);
     res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to delete finding' });

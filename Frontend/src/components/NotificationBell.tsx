@@ -68,8 +68,8 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
       }}>
         <Bell size={36} style={{ opacity: 0.2, marginBottom: '12px' }} />
         <p style={{ fontSize: '13px', margin: 0 }}>No notifications yet</p>
-        <p style={{ fontSize: '11px', margin: '4px 0 0', opacity: 0.6 }}>
-          Actions you take will appear here
+        <p style={{ fontSize: '11px', margin: '4px 0 0', opacity: 0.6, textAlign: 'center', maxWidth: 260, lineHeight: 1.45 }}>
+          Admins and managers see activity across the portal. Testers see their assigned projects and their own actions.
         </p>
       </div>
     );
@@ -132,8 +132,11 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
               </div>
               <p style={{
                 margin: '3px 0 0', fontSize: '11px',
-                color: '#6b7280', lineHeight: 1.4,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                color: '#6b7280', lineHeight: 1.45,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical' as const,
               }}>
                 {n.message}
               </p>
@@ -166,7 +169,7 @@ function PanelHeader({ count }: { count: number }) {
           borderRadius: '2px',
         }} />
         <Bell size={14} color="#f97316" />
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+        <span id="notification-panel-title" style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
           Notifications
         </span>
         <span style={{
@@ -279,10 +282,9 @@ export default function NotificationBell() {
     }
   };
 
-  // ── Mobile bottom sheet via portal — bypasses all parent clipping ──
+  // ── Mobile centered modal via portal — bypasses parent clipping ──
   const mobileSheet = (open && isMobile) ? createPortal(
     <>
-      {/* Backdrop — separate from sheet so it doesn't affect sheet layout */}
       <div
         onClick={() => setOpen(false)}
         style={{
@@ -295,58 +297,56 @@ export default function NotificationBell() {
         }}
       />
 
-      {/* Sheet — position:fixed with explicit top/bottom anchors.
-          This is the most reliable approach across all mobile browsers:
-          no flexbox height calculation, no svh units, no parent dependency.
-          bottom:0 + top:20% = exactly 80% of the real viewport height.     */}
+      {/* Full-screen flex centers the panel; pointer-events none so taps outside the card hit the backdrop */}
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          top: '20%',           // sheet occupies bottom 80% of viewport
+          inset: 0,
           zIndex: 99999,
-          background: '#0d0d1a',
-          borderRadius: '20px 20px 0 0',
-          border: '1px solid rgba(249,115,22,0.25)',
-          borderBottom: 'none',
-          boxShadow: '0 -12px 48px rgba(0,0,0,0.8)',
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',   // clip children — scroll lives inside only
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: 'max(16px, env(safe-area-inset-top))',
+          paddingRight: 'max(16px, env(safe-area-inset-right))',
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+          paddingLeft: 'max(16px, env(safe-area-inset-left))',
+          pointerEvents: 'none',
         }}
       >
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 2px', flexShrink: 0 }}>
-          <div style={{
-            width: '40px', height: '4px',
-            borderRadius: '2px',
-            background: 'rgba(255,255,255,0.18)',
-          }} />
-        </div>
-
-        {/* Header — fixed, never shrinks */}
-        <PanelHeader count={notifications.length} />
-
-        {/* Scroll area — takes all remaining space between header & footer.
-            flex:1 works reliably here because the parent has a definite   
-            height (fixed positioning gives it one automatically).          */}
         <div
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="notification-panel-title"
           style={{
-            flex: 1,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain',
-          } as React.CSSProperties}
+            pointerEvents: 'auto',
+            width: '100%',
+            maxWidth: 400,
+            maxHeight: 'min(85dvh, calc(100vh - 32px))',
+            background: '#0d0d1a',
+            borderRadius: 16,
+            border: '1px solid rgba(249,115,22,0.25)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.65)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
         >
-          <NotificationList notifications={notifications} />
+          <PanelHeader count={notifications.length} />
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+            } as React.CSSProperties}
+          >
+            <NotificationList notifications={notifications} />
+          </div>
+          <PanelFooter count={notifications.length} isMobile={true} />
         </div>
-
-        {/* Footer — fixed, never shrinks, respects home-bar safe area */}
-        <PanelFooter count={notifications.length} isMobile={true} />
       </div>
     </>,
     document.body,
@@ -419,7 +419,7 @@ export default function NotificationBell() {
         )}
       </div>
 
-      {/* Mobile sheet injected directly into <body> via portal */}
+      {/* Mobile centered modal via portal */}
       {mobileSheet}
     </>
   );

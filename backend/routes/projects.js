@@ -368,9 +368,15 @@ router.patch('/:id', requireAdminOrManager, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
+    const [prows] = await db.query('SELECT id, name FROM projects WHERE id = ?', [req.params.id]);
+    if (prows.length === 0) return res.status(404).json({ message: 'Project not found' });
     const [result] = await db.query('DELETE FROM projects WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Project not found' });
-    res.json({ message: 'Project deleted successfully' });
+    res.json({
+      message: 'Project deleted successfully',
+      name: prows[0].name,
+      id: prows[0].id,
+    });
   } catch (err) {
     console.error('DELETE /api/projects/:id error:', err);
     res.status(500).json({ message: err.sqlMessage || err.message || 'Failed to delete project' });
