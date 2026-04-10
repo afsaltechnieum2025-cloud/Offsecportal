@@ -5,7 +5,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     Loader2, FolderKanban, Bug, Award,
     History, Calendar, Mail, Shield, TrendingUp,
@@ -17,6 +16,7 @@ import {
     Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType
 } from 'docx';
 import { API } from '@/utils/api';
+import { cn } from '@/lib/utils';
 
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -335,7 +335,7 @@ export function UserProfileDialog({
         finding_created:  <Bug         className="h-4 w-4 text-primary" />,
         finding_retested: <History     className="h-4 w-4 text-blue-400" />,
         hof_submitted:    <Award       className="h-4 w-4 text-yellow-400" />,
-        project_assigned: <FolderKanban className="h-4 w-4 text-purple-400" />,
+        project_assigned: <FolderKanban className="h-4 w-4 text-primary" />,
     }[t] ?? <Info className="h-4 w-4 text-muted-foreground" />);
 
     const formatDate = (d: string) => {
@@ -348,12 +348,17 @@ export function UserProfileDialog({
     /* ── Render ──────────────────────────────────────────────────────────── */
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="
-                w-screen h-screen rounded-none p-0 overflow-hidden
-                sm:w-[95vw] sm:h-auto sm:max-h-[90vh] sm:rounded-xl
-                md:max-w-4xl lg:max-w-5xl
-                bg-background border border-border
-            ">
+            <DialogContent
+                className={cn(
+                    'flex min-h-0 flex-col gap-0 overflow-hidden',
+                    /* Mobile: inset card with side margins; centered via base dialog translate */
+                    'w-[calc(100vw-2rem)] max-w-[min(100vw-2rem,36rem)]',
+                    'max-h-[min(92dvh,calc(100dvh-2rem))]',
+                    'rounded-xl border border-border bg-background shadow-2xl',
+                    'sm:max-w-none sm:w-[min(95vw,56rem)] sm:max-h-[90vh]',
+                    'md:max-w-4xl lg:max-w-5xl',
+                )}
+            >
                 {/* ── Header — gradient-primary matching the portal's Add User button ── */}
                 <div className="gradient-primary px-4 py-4 sm:px-6 sm:py-5 flex-shrink-0">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -414,11 +419,17 @@ export function UserProfileDialog({
 
                 {/* ── Body ─────────────────────────────────────────────── */}
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-64">
+                    <div className="flex min-h-[200px] flex-1 items-center justify-center">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                 ) : profile ? (
-                    <ScrollArea className="h-[calc(100vh-130px)] sm:h-[calc(90vh-130px)]">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                        <div
+                            className={cn(
+                                'min-h-0 flex-1 overflow-y-auto overscroll-y-contain',
+                                '[-webkit-overflow-scrolling:touch]',
+                            )}
+                        >
                         <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6 pb-8">
 
                             {/* ── Stat cards ───────────────────────────── */}
@@ -628,7 +639,8 @@ export function UserProfileDialog({
                                 </TabsContent>
                             </Tabs>
                         </div>
-                    </ScrollArea>
+                        </div>
+                    </div>
                 ) : null}
             </DialogContent>
         </Dialog>
