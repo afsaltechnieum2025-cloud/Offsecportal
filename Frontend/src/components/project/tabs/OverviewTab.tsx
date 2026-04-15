@@ -247,7 +247,7 @@ export default function OverviewTab({
         <Card className="border-orange-500/15 bg-card/80">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-primary" />Business Logic Flows
+              <GitBranch className="h-4 w-4 text-primary" />No. of functionalities
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -258,8 +258,8 @@ export default function OverviewTab({
             ) : (
               <div className="rounded-lg border border-dashed border-border p-4 text-center">
                 <GitBranch className="h-6 w-6 text-muted-foreground/40 mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground italic">No business logic flows defined</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Document how the app works for testers</p>
+                <p className="text-xs text-muted-foreground italic">No functionalities details provided</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Count or describe key functionalities in scope</p>
               </div>
             )}
           </CardContent>
@@ -268,7 +268,7 @@ export default function OverviewTab({
         <Card className="border-orange-500/15 bg-card/80">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Network className="h-4 w-4 text-primary" />Entry Points & Workflow
+              <Network className="h-4 w-4 text-primary" />Assigned For
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -279,34 +279,64 @@ export default function OverviewTab({
             ) : (
               <div className="rounded-lg border border-dashed border-border p-4 text-center">
                 <Network className="h-6 w-6 text-muted-foreground/40 mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground italic">No entry points documented</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Login pages, APIs, upload endpoints, etc.</p>
+                <p className="text-xs text-muted-foreground italic">No assignment details provided</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Who or what this engagement is assigned for</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-orange-500/15 bg-card/80">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-primary" />Authentication & Access Controls
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {project.auth_controls ? (
-            <OrangeAccentBlock>
-              <p className={accentBodyClass}>{project.auth_controls}</p>
-            </OrangeAccentBlock>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border p-4 text-center">
-              <Lock className="h-6 w-6 text-muted-foreground/40 mx-auto mb-1" />
-              <p className="text-xs text-muted-foreground italic">No auth controls documented</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">SSO, OAuth, JWT, role-based access, MFA, etc.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="border-orange-500/15 bg-card/80">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />Authentication method
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {project.auth_controls ? (
+              <OrangeAccentBlock>
+                <p className={accentBodyClass}>{project.auth_controls}</p>
+              </OrangeAccentBlock>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                <Lock className="h-6 w-6 text-muted-foreground/40 mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground italic">No authentication method documented</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">E.g. SSO, OAuth, JWT, API keys, MFA</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-500/15 bg-card/80">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />Tech Stack
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {project.tech_stack?.trim() ? (
+              <YellowAccentBlock contentClassName="flex flex-wrap gap-2">
+                {project.tech_stack.split(',').map((t: string, i: number) => (
+                  <span
+                    key={`${i}-${t.trim()}`}
+                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-medium"
+                  >
+                    {t.trim()}
+                  </span>
+                ))}
+              </YellowAccentBlock>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                <Layers className="h-6 w-6 text-muted-foreground/40 mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground italic">No tech stack specified</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Comma-separated on the project form, e.g. React, Node.js, AWS</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
@@ -360,25 +390,6 @@ export default function OverviewTab({
           </CardContent>
         </Card>
       </div>
-
-      {project.tech_stack && (
-        <Card className="border-orange-500/15 bg-card/80">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" />Tech Stack
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {project.tech_stack.split(',').map((t: string) => (
-                <span key={t} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-medium">
-                  {t.trim()}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card className="border-orange-500/15 bg-card/80">
         <CardHeader className="pb-3">

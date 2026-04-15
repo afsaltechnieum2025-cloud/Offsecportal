@@ -59,15 +59,15 @@ const requireAdmin = (req, res, next) => {
 //  HELPER: Auto-generate next project code (e.g. TOP004)
 // ─────────────────────────────────────────────────────────────
 async function generateProjectCode() {
+  // Use the highest existing TOP### suffix, not the row with max new_id — those can
+  // diverge (imports, manual edits) and would reuse an existing code (duplicate key).
   const [rows] = await db.query(
-    `SELECT project_code FROM projects
-     WHERE project_code LIKE 'TOP%'
-     ORDER BY new_id DESC LIMIT 1`
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(project_code, 4) AS UNSIGNED)), 0) AS max_seq
+     FROM projects
+     WHERE project_code REGEXP '^TOP[0-9]+$'`
   );
-  if (!rows.length) return 'TOP001';
-  const last = rows[0].project_code;
-  const num  = parseInt(last.replace('TOP', ''), 10);
-  return `TOP${String(num + 1).padStart(3, '0')}`;
+  const maxSeq = Number(rows[0]?.max_seq ?? 0);
+  return `TOP${String(maxSeq + 1).padStart(3, '0')}`;
 }
 
 // ─────────────────────────────────────────────────────────────
