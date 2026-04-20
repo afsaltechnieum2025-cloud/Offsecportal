@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import SuiteLaunchOverlay, { ACCENT_TEXT } from '@/components/SuiteLaunchOverlay';
 
-const SAST_URL = 'http://13.203.230.135:3000/';
+const SAST_URL = 'http://3.111.33.116:3000';
 
 const SCAN_LINES = [
   'Initializing static analysis engine...',
