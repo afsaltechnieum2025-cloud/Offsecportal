@@ -38,6 +38,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { API as API_BASE } from '@/utils/api';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,103 @@ interface Assignee {
   username: string;
 }
 
+// ─── Add-finding form validation ─────────────────────────────────────────────
+
+type FindingFormErrors = Partial<
+  Record<
+    | 'projectId'
+    | 'severity'
+    | 'title'
+    | 'description'
+    | 'cvssScore'
+    | 'affectedComponent'
+    | 'cweId'
+    | 'stepsToReproduce'
+    | 'impact'
+    | 'remediation',
+    string
+  >
+>;
+
+type FindingFormFields = {
+  projectId: string;
+  severity: Severity | '';
+  title: string;
+  description: string;
+  stepsToReproduce: string;
+  impact: string;
+  remediation: string;
+  affectedComponent: string;
+  cvssScore: string;
+  cweId: string;
+};
+
+const RE_FINDING_TITLE = /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F]{3,300}$/;
+const RE_FINDING_DESCRIPTION = /^[^\x00]{10,20000}$/;
+const RE_FINDING_TEXT_OPTIONAL = /^[^\x00]{1,20000}$/;
+const RE_AFFECTED_COMPONENT = /^[\p{L}\p{N}_\s./:\\?#=&%\[\]{}(),+@-]{1,500}$/u;
+const RE_CWE_ID = /^CWE-\d{1,5}$/i;
+const RE_CVSS_SCORE = /^(?:10(?:\.0{1,3})?|[0-9](?:\.\d{1,3})?)$/;
+
+function validateFindingForm(fields: FindingFormFields): FindingFormErrors {
+  const errors: FindingFormErrors = {};
+
+  if (!fields.projectId.trim()) errors.projectId = 'Select a project.';
+  if (!fields.severity) errors.severity = 'Select a severity.';
+
+  const title = fields.title.trim();
+  if (!title) errors.title = 'Title is required.';
+  else if (!RE_FINDING_TITLE.test(title)) {
+    errors.title = 'Use 3–300 characters; leading/trailing spaces trimmed; no control characters.';
+  }
+
+  const description = fields.description.trim();
+  if (!description) errors.description = 'Description is required.';
+  else if (!RE_FINDING_DESCRIPTION.test(description)) {
+    errors.description = 'Use 10–20,000 characters (no null bytes).';
+  }
+
+  const cvss = fields.cvssScore.trim();
+  if (cvss) {
+    if (!RE_CVSS_SCORE.test(cvss)) {
+      errors.cvssScore = 'Enter a number from 0 to 10 (e.g., 7.5 or 10).';
+    } else {
+      const n = parseFloat(cvss);
+      if (Number.isNaN(n) || n < 0 || n > 10) {
+        errors.cvssScore = 'CVSS must be between 0 and 10.';
+      }
+    }
+  }
+
+  const ac = fields.affectedComponent.trim();
+  if (ac && !RE_AFFECTED_COMPONENT.test(ac)) {
+    errors.affectedComponent =
+      'Use 1–500 characters: letters, numbers, paths, and common URL symbols.';
+  }
+
+  const cwe = fields.cweId.trim();
+  if (cwe && !RE_CWE_ID.test(cwe)) {
+    errors.cweId = 'Use CWE format, e.g., CWE-79.';
+  }
+
+  const steps = fields.stepsToReproduce.trim();
+  if (steps && !RE_FINDING_TEXT_OPTIONAL.test(steps)) {
+    errors.stepsToReproduce = 'Use 1–20,000 characters (no null bytes).';
+  }
+
+  const impact = fields.impact.trim();
+  if (impact && !RE_FINDING_TEXT_OPTIONAL.test(impact)) {
+    errors.impact = 'Use 1–20,000 characters (no null bytes).';
+  }
+
+  const rem = fields.remediation.trim();
+  if (rem && !RE_FINDING_TEXT_OPTIONAL.test(rem)) {
+    errors.remediation = 'Use 1–20,000 characters (no null bytes).';
+  }
+
+  return errors;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Findings() {
@@ -129,6 +227,21 @@ export default function Findings() {
     cvssScore: '',
     cweId: '',
   });
+
+  const [findingFormErrors, setFindingFormErrors] = useState<FindingFormErrors>({});
+
+  const clearFindingFieldError = (key: keyof FindingFormErrors) => {
+    setFindingFormErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const handleAddFindingDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setFindingFormErrors({});
+  };
 
   // ─── Auth headers ─────────────────────────────────────────────────────────────
 
@@ -252,6 +365,7 @@ export default function Findings() {
     allProjects.find(p => p.id === projectId)?.name ?? 'Unknown Project';
 
   const resetForm = () => {
+    setFindingFormErrors({});
     setFormData({
       projectId: '', severity: '', title: '', description: '',
       stepsToReproduce: '', impact: '', remediation: '',
@@ -314,8 +428,10 @@ export default function Findings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectId || !formData.severity || !formData.title || !formData.description) {
-      toast.error('Please fill in all required fields');
+    const validation = validateFindingForm(formData);
+    setFindingFormErrors(validation);
+    if (Object.keys(validation).length > 0) {
+      toast.error('Please fix the highlighted fields.');
       return;
     }
     if (!user) { toast.error('You must be logged in'); return; }
@@ -335,15 +451,15 @@ export default function Findings() {
         headers: authHeaders(),
         body: JSON.stringify({
           project_id:         formData.projectId,
-          title:              formData.title,
-          description:        formData.description,
+          title:              formData.title.trim(),
+          description:        formData.description.trim(),
           severity:           formData.severity,
-          steps_to_reproduce: formData.stepsToReproduce || null,
-          impact:             formData.impact || null,
-          remediation:        formData.remediation || null,
-          affected_component: formData.affectedComponent || null,
-          cvss_score:         formData.cvssScore ? parseFloat(formData.cvssScore) : null,
-          cwe_id:             formData.cweId || null,
+          steps_to_reproduce: formData.stepsToReproduce.trim() || null,
+          impact:             formData.impact.trim() || null,
+          remediation:        formData.remediation.trim() || null,
+          affected_component: formData.affectedComponent.trim() || null,
+          cvss_score:         formData.cvssScore.trim() ? parseFloat(formData.cvssScore.trim()) : null,
+          cwe_id:             formData.cweId.trim() || null,
           created_by:         userId,
         }),
       });
@@ -390,13 +506,19 @@ export default function Findings() {
 
   // ─── Stage POC files in the Add Finding form ──────────────────────────────────
 
+  const MAX_POC_BYTES = 10 * 1024 * 1024;
+
   const handleFormPocSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
-    const valid = files.filter(f => allowed.includes(f.type));
-    if (valid.length !== files.length) toast.error('Only JPEG and PNG files are allowed');
+    const validType = files.filter(f => allowed.includes(f.type));
+    if (validType.length !== files.length) toast.error('Only JPEG and PNG files are allowed');
+    const validSize = validType.filter(f => f.size <= MAX_POC_BYTES);
+    if (validSize.length !== validType.length) {
+      toast.error(`Each POC image must be ${MAX_POC_BYTES / (1024 * 1024)}MB or smaller`);
+    }
     const newPocs = await Promise.all(
-      valid.map(async file => ({ file, preview: await fileToDataUrl(file) }))
+      validSize.map(async file => ({ file, preview: await fileToDataUrl(file) }))
     );
     setPendingPocs(prev => [...prev, ...newPocs]);
     if (formPocInputRef.current) formPocInputRef.current.value = '';
@@ -611,7 +733,7 @@ export default function Findings() {
             </SelectContent>
           </Select>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={handleAddFindingDialogOpenChange}>
             <DialogTrigger asChild>
               <Button variant="default" className="gradient-technieum shrink-0">
                 <Plus className="h-4 w-4 mr-2" />
@@ -627,17 +749,36 @@ export default function Findings() {
                   <div className="space-y-2">
                     <Label>Project *</Label>
                     {/* formProjects = visibleProjects, so testers only see their assigned projects */}
-                    <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                    <Select
+                      value={formData.projectId}
+                      onValueChange={(v) => {
+                        clearFindingFieldError('projectId');
+                        setFormData({ ...formData, projectId: v });
+                      }}
+                    >
+                      <SelectTrigger className={cn(findingFormErrors.projectId && 'border-destructive')}>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
                       <SelectContent>
                         {formProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {findingFormErrors.projectId ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.projectId}</p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <Label>Severity *</Label>
-                    <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                      <SelectTrigger><SelectValue placeholder="Select severity" /></SelectTrigger>
+                    <Select
+                      value={formData.severity}
+                      onValueChange={(v) => {
+                        clearFindingFieldError('severity');
+                        setFormData({ ...formData, severity: v as Severity });
+                      }}
+                    >
+                      <SelectTrigger className={cn(findingFormErrors.severity && 'border-destructive')}>
+                        <SelectValue placeholder="Select severity" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Critical">Critical</SelectItem>
                         <SelectItem value="High">High</SelectItem>
@@ -646,52 +787,171 @@ export default function Findings() {
                         <SelectItem value="Informational">Informational</SelectItem>
                       </SelectContent>
                     </Select>
+                    {findingFormErrors.severity ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.severity}</p>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Title *</Label>
-                    <Input placeholder="Finding title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
+                    <Input
+                      placeholder="Finding title"
+                      value={formData.title}
+                      onChange={(e) => {
+                        clearFindingFieldError('title');
+                        setFormData({ ...formData, title: e.target.value });
+                      }}
+                      className={cn(findingFormErrors.title && 'border-destructive')}
+                    />
+                    {findingFormErrors.title ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.title}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">3–300 characters, no control characters</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label>CVSS Score</Label>
-                    <Input placeholder="e.g., 9.8" type="number" step="0.1" min="0" max="10" value={formData.cvssScore} onChange={(e) => setFormData({ ...formData, cvssScore: e.target.value })} />
+                    <Label>
+                      CVSS Score <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    </Label>
+                    <Input
+                      placeholder="e.g., 9.8"
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.cvssScore}
+                      onChange={(e) => {
+                        clearFindingFieldError('cvssScore');
+                        setFormData({ ...formData, cvssScore: e.target.value });
+                      }}
+                      className={cn(findingFormErrors.cvssScore && 'border-destructive')}
+                    />
+                    {findingFormErrors.cvssScore ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.cvssScore}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">0–10 if provided</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Affected Component</Label>
-                    <Input placeholder="e.g., /api/users" value={formData.affectedComponent} onChange={(e) => setFormData({ ...formData, affectedComponent: e.target.value })} />
+                    <Label>
+                      Affected Component <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    </Label>
+                    <Input
+                      placeholder="e.g., /api/users"
+                      value={formData.affectedComponent}
+                      onChange={(e) => {
+                        clearFindingFieldError('affectedComponent');
+                        setFormData({ ...formData, affectedComponent: e.target.value });
+                      }}
+                      className={cn(findingFormErrors.affectedComponent && 'border-destructive')}
+                    />
+                    {findingFormErrors.affectedComponent ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.affectedComponent}</p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
-                    <Label>CWE ID</Label>
-                    <Input placeholder="e.g., CWE-79" value={formData.cweId} onChange={(e) => setFormData({ ...formData, cweId: e.target.value })} />
+                    <Label>
+                      CWE ID <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    </Label>
+                    <Input
+                      placeholder="e.g., CWE-79"
+                      value={formData.cweId}
+                      onChange={(e) => {
+                        clearFindingFieldError('cweId');
+                        setFormData({ ...formData, cweId: e.target.value });
+                      }}
+                      className={cn(findingFormErrors.cweId && 'border-destructive')}
+                    />
+                    {findingFormErrors.cweId ? (
+                      <p className="text-xs text-destructive">{findingFormErrors.cweId}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Format: CWE-###</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Description *</Label>
-                  <Textarea placeholder="Detailed description of the vulnerability" rows={3} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                  <Textarea
+                    placeholder="Detailed description of the vulnerability"
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => {
+                      clearFindingFieldError('description');
+                      setFormData({ ...formData, description: e.target.value });
+                    }}
+                    className={cn(findingFormErrors.description && 'border-destructive')}
+                  />
+                  {findingFormErrors.description ? (
+                    <p className="text-xs text-destructive">{findingFormErrors.description}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">10–20,000 characters</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Steps to Reproduce</Label>
-                  <Textarea placeholder="Step-by-step instructions to reproduce" rows={4} value={formData.stepsToReproduce} onChange={(e) => setFormData({ ...formData, stepsToReproduce: e.target.value })} />
+                  <Label>
+                    Steps to Reproduce <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                  </Label>
+                  <Textarea
+                    placeholder="Step-by-step instructions to reproduce"
+                    rows={4}
+                    value={formData.stepsToReproduce}
+                    onChange={(e) => {
+                      clearFindingFieldError('stepsToReproduce');
+                      setFormData({ ...formData, stepsToReproduce: e.target.value });
+                    }}
+                    className={cn(findingFormErrors.stepsToReproduce && 'border-destructive')}
+                  />
+                  {findingFormErrors.stepsToReproduce ? (
+                    <p className="text-xs text-destructive">{findingFormErrors.stepsToReproduce}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label>Impact</Label>
-                  <Textarea placeholder="Potential impact of this vulnerability" rows={2} value={formData.impact} onChange={(e) => setFormData({ ...formData, impact: e.target.value })} />
+                  <Label>
+                    Impact <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                  </Label>
+                  <Textarea
+                    placeholder="Potential impact of this vulnerability"
+                    rows={2}
+                    value={formData.impact}
+                    onChange={(e) => {
+                      clearFindingFieldError('impact');
+                      setFormData({ ...formData, impact: e.target.value });
+                    }}
+                    className={cn(findingFormErrors.impact && 'border-destructive')}
+                  />
+                  {findingFormErrors.impact ? (
+                    <p className="text-xs text-destructive">{findingFormErrors.impact}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label>Remediation</Label>
-                  <Textarea placeholder="Recommended remediation steps" rows={3} value={formData.remediation} onChange={(e) => setFormData({ ...formData, remediation: e.target.value })} />
+                  <Label>
+                    Remediation <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                  </Label>
+                  <Textarea
+                    placeholder="Recommended remediation steps"
+                    rows={3}
+                    value={formData.remediation}
+                    onChange={(e) => {
+                      clearFindingFieldError('remediation');
+                      setFormData({ ...formData, remediation: e.target.value });
+                    }}
+                    className={cn(findingFormErrors.remediation && 'border-destructive')}
+                  />
+                  {findingFormErrors.remediation ? (
+                    <p className="text-xs text-destructive">{findingFormErrors.remediation}</p>
+                  ) : null}
                 </div>
 
-                {/* POC Upload in form */}
+                {/* POC Upload in form — optional */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Proof of Concept (POC)</Label>
+                    <Label>
+                      Proof of Concept (POC) <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    </Label>
                     <input ref={formPocInputRef} type="file" accept=".jpg,.jpeg,.png" multiple className="hidden" onChange={handleFormPocSelect} />
                   </div>
                   {pendingPocs.length > 0 ? (
