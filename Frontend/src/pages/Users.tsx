@@ -50,7 +50,7 @@ import {
 import { UserProfileDialog } from '@/components/UserProfileDialog';
 import { triggerNotifyRefresh } from '@/utils/notifyRefresh';
 import { API } from '@/utils/api';
-
+import { cn } from '@/lib/utils';
 
 type AppRole = 'admin' | 'manager' | 'tester' | 'client';
 
@@ -75,26 +75,61 @@ interface ProjectAssignment {
   user_id: number;
 }
 
-// ── Validation helpers ────────────────────────────────────────────────────────
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+// ── Create-user validation (same pattern as Findings / Projects) ─────────────
 
-interface FormErrors {
-  name?: string;
-  full_name?: string;
-  email?: string;
-  password?: string;
-}
+const ROLE_VALUES: AppRole[] = ['admin', 'manager', 'tester', 'client'];
 
-const validateForm = (user: { name: string; full_name: string; email: string; password: string }): FormErrors => {
-  const errors: FormErrors = {};
-  if (!user.name.trim()) errors.name = 'Username is required.';
-  if (!user.full_name.trim()) errors.full_name = 'Full name is required.';
-  if (!user.email.trim()) errors.email = 'Email is required.';
-  else if (!EMAIL_REGEX.test(user.email)) errors.email = 'Enter a valid email address.';
-  if (!user.password) errors.password = 'Password is required.';
-  else if (user.password.length < 8) errors.password = 'Password must be at least 8 characters.';
-  return errors;
+const RE_USERNAME = /^[a-zA-Z0-9._-]{3,64}$/;
+const RE_FULL_NAME = /^[\p{L}\p{M}\s'.-]{2,100}$/u;
+const RE_EMAIL =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const RE_PASSWORD = /^(?=.*[A-Za-z])(?=.*\d)[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F]{8,128}$/;
+
+type CreateUserFormErrors = Partial<
+  Record<'name' | 'full_name' | 'email' | 'password' | 'role', string>
+>;
+
+type CreateUserFields = {
+  name: string;
+  full_name: string;
+  email: string;
+  password: string;
+  role: AppRole;
 };
+
+function validateCreateUserForm(user: CreateUserFields): CreateUserFormErrors {
+  const errors: CreateUserFormErrors = {};
+
+  const name = user.name.trim();
+  if (!name) errors.name = 'Username is required.';
+  else if (!RE_USERNAME.test(name)) {
+    errors.name = 'Use 3–64 characters: letters, numbers, period, underscore, or hyphen only.';
+  }
+
+  const fullName = user.full_name.trim();
+  if (!fullName) errors.full_name = 'Full name is required.';
+  else if (!RE_FULL_NAME.test(fullName)) {
+    errors.full_name = 'Use 2–100 characters: letters, spaces, apostrophe, period, or hyphen.';
+  }
+
+  const email = user.email.trim();
+  if (!email) errors.email = 'Email is required.';
+  else if (!RE_EMAIL.test(email)) {
+    errors.email = 'Enter a valid email address.';
+  }
+
+  if (!user.password) errors.password = 'Password is required.';
+  else if (!RE_PASSWORD.test(user.password)) {
+    errors.password =
+      'Use 8–128 characters with at least one letter and one number; no ASCII control characters.';
+  }
+
+  if (!ROLE_VALUES.includes(user.role)) {
+    errors.role = 'Select a valid role.';
+  }
+
+  return errors;
+}
 
 const capitalizeRole = (role: AppRole | null): string => {
   if (!role) return 'No role';
@@ -117,8 +152,7 @@ export default function Users() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [formErrors, setFormErrors] = useState<CreateUserFormErrors>({});
   const [newUser, setNewUser] = useState({
     name: '', email: '', password: '', full_name: '', role: 'tester' as AppRole,
   });
@@ -170,8 +204,15 @@ export default function Users() {
   const resetCreateDialog = () => {
     setNewUser({ name: '', email: '', password: '', full_name: '', role: 'tester' });
     setFormErrors({});
-    setTouched({});
     setShowPassword(false);
+  };
+
+  const clearFieldError = (key: keyof CreateUserFormErrors) => {
+    setFormErrors(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   const handleCreateDialogChange = (open: boolean) => {
@@ -179,33 +220,27 @@ export default function Users() {
     if (!open) resetCreateDialog();
   };
 
-  // ── Live validation on field change ──────────────────────────────────────
-  const handleFieldChange = (field: keyof typeof newUser, value: string) => {
-    const updated = { ...newUser, [field]: value };
-    setNewUser(updated);
-    if (Object.keys(touched).length > 0) {
-      setFormErrors(validateForm(updated));
-    }
-  };
-
-  const handleFieldBlur = (field: string) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
-    setFormErrors(validateForm(newUser));
-  };
-
   // ── Create user ──────────────────────────────────────────────────────────
   const handleCreateUser = async () => {
-    setTouched({ name: true, full_name: true, email: true, password: true });
-    const errors = validateForm(newUser);
+    const errors = validateCreateUserForm(newUser);
     setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields.');
+      return;
+    }
 
     setIsCreating(true);
     try {
       const res = await fetch(`${API}/users`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({
+          name: newUser.name.trim(),
+          full_name: newUser.full_name.trim(),
+          email: newUser.email.trim(),
+          password: newUser.password,
+          role: newUser.role,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -477,13 +512,17 @@ export default function Users() {
                   <Input
                     placeholder="Enter username"
                     value={newUser.name}
-                    onChange={(e) => handleFieldChange('name', e.target.value)}
-                    onBlur={() => handleFieldBlur('name')}
+                    onChange={(e) => {
+                      clearFieldError('name');
+                      setNewUser({ ...newUser, name: e.target.value });
+                    }}
                     autoComplete="off"
-                    className={formErrors.name && touched.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    className={cn(formErrors.name && 'border-destructive focus-visible:ring-destructive')}
                   />
-                  {formErrors.name && touched.name && (
+                  {formErrors.name ? (
                     <p className="text-xs text-destructive mt-1">{formErrors.name}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">3–64 characters: letters, numbers, . _ -</p>
                   )}
                 </div>
 
@@ -496,12 +535,16 @@ export default function Users() {
                   <Input
                     placeholder="Enter full name"
                     value={newUser.full_name}
-                    onChange={(e) => handleFieldChange('full_name', e.target.value)}
-                    onBlur={() => handleFieldBlur('full_name')}
-                    className={formErrors.full_name && touched.full_name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    onChange={(e) => {
+                      clearFieldError('full_name');
+                      setNewUser({ ...newUser, full_name: e.target.value });
+                    }}
+                    className={cn(formErrors.full_name && 'border-destructive focus-visible:ring-destructive')}
                   />
-                  {formErrors.full_name && touched.full_name && (
+                  {formErrors.full_name ? (
                     <p className="text-xs text-destructive mt-1">{formErrors.full_name}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">2–100 characters; letters and common name punctuation</p>
                   )}
                 </div>
 
@@ -516,13 +559,15 @@ export default function Users() {
                     placeholder="Enter email address"
                     autoComplete="new-password"
                     value={newUser.email}
-                    onChange={(e) => handleFieldChange('email', e.target.value)}
-                    onBlur={() => handleFieldBlur('email')}
-                    className={formErrors.email && touched.email ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    onChange={(e) => {
+                      clearFieldError('email');
+                      setNewUser({ ...newUser, email: e.target.value });
+                    }}
+                    className={cn(formErrors.email && 'border-destructive focus-visible:ring-destructive')}
                   />
-                  {formErrors.email && touched.email && (
+                  {formErrors.email ? (
                     <p className="text-xs text-destructive mt-1">{formErrors.email}</p>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Password */}
@@ -534,12 +579,17 @@ export default function Users() {
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Min. 8 characters"
+                      placeholder="Min. 8 characters, include letters and numbers"
                       value={newUser.password}
                       autoComplete="new-password"
-                      onChange={(e) => handleFieldChange('password', e.target.value)}
-                      onBlur={() => handleFieldBlur('password')}
-                      className={`pr-10 ${formErrors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      onChange={(e) => {
+                        clearFieldError('password');
+                        setNewUser({ ...newUser, password: e.target.value });
+                      }}
+                      className={cn(
+                        'pr-10',
+                        formErrors.password && 'border-destructive focus-visible:ring-destructive',
+                      )}
                     />
                     <button
                       type="button"
@@ -550,12 +600,12 @@ export default function Users() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {formErrors.password && touched.password ? (
+                  {formErrors.password ? (
                     <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
                   ) : (
-                    !newUser.password && (
-                      <p className="text-xs text-muted-foreground mt-1">Must be at least 8 characters.</p>
-                    )
+                    <p className="text-xs text-muted-foreground mt-1">
+                      8–128 characters; at least one letter and one number; no control characters.
+                    </p>
                   )}
                 </div>
 
@@ -563,16 +613,23 @@ export default function Users() {
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1 mb-2">
                     <UserCog className="h-3 w-3" />
-                    Role
+                    Role <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppRole })}>
-                    <SelectTrigger>
+                  <Select
+                    value={newUser.role}
+                    onValueChange={(v) => {
+                      clearFieldError('role');
+                      setNewUser({ ...newUser, role: v as AppRole });
+                    }}
+                  >
+                    <SelectTrigger className={cn(formErrors.role && 'border-destructive')}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <RoleSelectItems />
                     </SelectContent>
                   </Select>
+                  {formErrors.role ? <p className="text-xs text-destructive mt-1">{formErrors.role}</p> : null}
                 </div>
 
                 <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
