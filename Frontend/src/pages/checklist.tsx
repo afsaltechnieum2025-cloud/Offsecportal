@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
 } from '@/components/ui/dialog';
 import { API } from '@/utils/api';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,6 +145,119 @@ const displayName = (f: HofFinding) =>
   f.researcher_full_name ? `${f.researcher_full_name} (@${f.researcher_name})` : `@${f.researcher_name}`;
 
 const today = new Date().toISOString().split('T')[0];
+
+const SEVERITY_VALUES = ['critical', 'high', 'medium', 'low', 'informational'] as const;
+const STATUS_VALUES = ['submitted', 'triaged', 'accepted', 'rejected', 'duplicate', 'informative', 'fixed'] as const;
+
+const RE_HOF_TITLE = /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F]{3,300}$/;
+const RE_HOF_DESCRIPTION = /^[^\x00]{10,20000}$/;
+const RE_CVE_ID = /^CVE-(?:19|20)\d{2}-\d{4,12}$/i;
+
+type HofAddFindingErrors = Partial<
+  Record<
+    | 'user_id'
+    | 'title'
+    | 'description'
+    | 'severity'
+    | 'status'
+    | 'cve_id'
+    | 'reported_at'
+    | 'blog_content',
+    string
+  >
+>;
+
+type HofAddFindingForm = {
+  user_id: string;
+  title: string;
+  description: string;
+  severity: string;
+  status: string;
+  cve_id: string;
+  reported_at: string;
+  blog_content: string;
+};
+
+function htmlPlainText(html: string): string {
+  if (typeof document === 'undefined') {
+    return html
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function isValidYmdNotFuture(ymd: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return false;
+  const parts = ymd.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  if (
+    Number.isNaN(d.getTime()) ||
+    d.getFullYear() !== parts[0] ||
+    d.getMonth() !== parts[1] - 1 ||
+    d.getDate() !== parts[2]
+  ) {
+    return false;
+  }
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d <= t;
+}
+
+function validateHofAddFindingForm(form: HofAddFindingForm): HofAddFindingErrors {
+  const errors: HofAddFindingErrors = {};
+
+  if (!form.user_id.trim()) errors.user_id = 'Select a researcher.';
+
+  const title = form.title.trim();
+  if (!title) errors.title = 'Title is required.';
+  else if (!RE_HOF_TITLE.test(title)) {
+    errors.title = 'Use 3–300 characters; no control characters.';
+  }
+
+  const description = form.description.trim();
+  if (!description) errors.description = 'Description is required.';
+  else if (!RE_HOF_DESCRIPTION.test(description)) {
+    errors.description = 'Use 10–20,000 characters (no null bytes).';
+  }
+
+  if (!SEVERITY_VALUES.includes(form.severity as (typeof SEVERITY_VALUES)[number])) {
+    errors.severity = 'Select a valid severity.';
+  }
+  if (!STATUS_VALUES.includes(form.status as (typeof STATUS_VALUES)[number])) {
+    errors.status = 'Select a valid status.';
+  }
+
+  const cve = form.cve_id.trim();
+  if (!cve) errors.cve_id = 'CVE ID is required.';
+  else if (!RE_CVE_ID.test(cve)) {
+    errors.cve_id = 'Use CVE format: CVE-YYYY-NNNN (e.g., CVE-2024-12345).';
+  }
+
+  if (!form.reported_at) errors.reported_at = 'Reported date is required.';
+  else if (!isValidYmdNotFuture(form.reported_at)) {
+    errors.reported_at = 'Enter a valid calendar date (YYYY-MM-DD) not in the future.';
+  }
+
+  const plain = htmlPlainText(form.blog_content);
+  if (!plain) errors.blog_content = 'Vulnerability write-up is required.';
+  else if (plain.length < 50) {
+    errors.blog_content = 'Write-up must contain at least 50 characters of text (excluding formatting).';
+  } else if (plain.length > 100_000) {
+    errors.blog_content = 'Write-up text is too long (max 100,000 characters).';
+  } else if (form.blog_content.length > 500_000) {
+    errors.blog_content = 'Write-up HTML is too large.';
+  }
+
+  return errors;
+}
 
 const SeverityBadge = ({ severity }: { severity: string }) => {
   const s = severity?.toLowerCase() ?? 'informational';
@@ -328,8 +442,17 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
     reported_at: '',
     blog_content: '',
   });
+  const [formErrors, setFormErrors] = useState<HofAddFindingErrors>({});
   const [saving, setSaving] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const clearField = (key: keyof HofAddFindingErrors) => {
+    setFormErrors(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const openDatePicker = () => {
     const el = dateInputRef.current;
@@ -338,8 +461,19 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
   };
 
   const save = async () => {
-    if (!form.title.trim() || !form.user_id) {
-      toast.error('Title and researcher are required.');
+    const validation = validateHofAddFindingForm({
+      user_id: form.user_id,
+      title: form.title,
+      description: form.description,
+      severity: form.severity,
+      status: form.status,
+      cve_id: form.cve_id,
+      reported_at: form.reported_at,
+      blog_content: form.blog_content,
+    });
+    setFormErrors(validation);
+    if (Object.keys(validation).length > 0) {
+      toast.error('Please fix the highlighted fields.');
       return;
     }
     setSaving(true);
@@ -349,13 +483,13 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           user_id: Number(form.user_id),
-          title: form.title,
-          description: form.description || null,
+          title: form.title.trim(),
+          description: form.description.trim(),
           severity: form.severity,
           status: form.status,
-          cve_id: form.cve_id || null,
-          reported_at: form.reported_at || null,
-          blog_url: form.blog_content || null,
+          cve_id: form.cve_id.trim().toUpperCase(),
+          reported_at: form.reported_at,
+          blog_url: form.blog_content,
         }),
       });
       if (!res.ok) {
@@ -383,8 +517,16 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
       <div className="space-y-4 mt-4">
         <div className="space-y-2">
           <Label>Researcher *</Label>
-          <Select value={form.user_id} onValueChange={v => setForm(f => ({ ...f, user_id: v }))}>
-            <SelectTrigger><SelectValue placeholder="Select researcher" /></SelectTrigger>
+          <Select
+            value={form.user_id}
+            onValueChange={v => {
+              clearField('user_id');
+              setForm(f => ({ ...f, user_id: v }));
+            }}
+          >
+            <SelectTrigger className={cn(formErrors.user_id && 'border-destructive')}>
+              <SelectValue placeholder="Select researcher" />
+            </SelectTrigger>
             <SelectContent>
               {users.map(u => (
                 <SelectItem key={u.id} value={String(u.id)}>
@@ -393,61 +535,112 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
               ))}
             </SelectContent>
           </Select>
+          {formErrors.user_id ? <p className="text-xs text-destructive">{formErrors.user_id}</p> : null}
         </div>
         <div className="space-y-2">
           <Label>Title *</Label>
           <Input
             placeholder="e.g. IDOR in /api/users/:id allows horizontal privilege escalation"
             value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            onChange={e => {
+              clearField('title');
+              setForm(f => ({ ...f, title: e.target.value }));
+            }}
+            className={cn(formErrors.title && 'border-destructive')}
           />
+          {formErrors.title ? (
+            <p className="text-xs text-destructive">{formErrors.title}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">3–300 characters, no control characters</p>
+          )}
         </div>
         <div className="space-y-2">
-          <Label>Description</Label>
+          <Label>Description *</Label>
           <textarea
             rows={3}
             placeholder="Brief summary of the vulnerability — what it is and where it was found…"
             value={form.description}
-            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            onChange={e => {
+              clearField('description');
+              setForm(f => ({ ...f, description: e.target.value }));
+            }}
+            className={cn(
+              'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none',
+              formErrors.description && 'border-destructive focus:ring-destructive',
+            )}
           />
+          {formErrors.description ? (
+            <p className="text-xs text-destructive">{formErrors.description}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">10–20,000 characters</p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Severity</Label>
-            <Select value={form.severity} onValueChange={v => setForm(f => ({ ...f, severity: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label>Severity *</Label>
+            <Select
+              value={form.severity}
+              onValueChange={v => {
+                clearField('severity');
+                setForm(f => ({ ...f, severity: v }));
+              }}
+            >
+              <SelectTrigger className={cn(formErrors.severity && 'border-destructive')}>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {['critical', 'high', 'medium', 'low', 'informational'].map(s => (
                   <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {formErrors.severity ? <p className="text-xs text-destructive">{formErrors.severity}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label>Status *</Label>
+            <Select
+              value={form.status}
+              onValueChange={v => {
+                clearField('status');
+                setForm(f => ({ ...f, status: v }));
+              }}
+            >
+              <SelectTrigger className={cn(formErrors.status && 'border-destructive')}>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {['submitted', 'triaged', 'accepted', 'rejected', 'duplicate', 'informative', 'fixed'].map(s => (
                   <SelectItem key={s} value={s}>{STATUS_LABEL[s] ?? s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {formErrors.status ? <p className="text-xs text-destructive">{formErrors.status}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label>CVE ID</Label>
+            <Label>CVE ID *</Label>
             <Input
-              placeholder="CVE-2025-XXXX"
+              placeholder="CVE-2025-12345"
               value={form.cve_id}
-              onChange={e => setForm(f => ({ ...f, cve_id: e.target.value }))}
+              onChange={e => {
+                clearField('cve_id');
+                setForm(f => ({ ...f, cve_id: e.target.value }));
+              }}
+              className={cn(formErrors.cve_id && 'border-destructive')}
             />
+            {formErrors.cve_id ? (
+              <p className="text-xs text-destructive">{formErrors.cve_id}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Format: CVE-YYYY-NNNN+</p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label>Reported Date</Label>
+            <Label>Reported Date *</Label>
             <div
               onClick={openDatePicker}
-              className="relative flex items-center h-10 rounded-md border border-input bg-background px-3 gap-2 cursor-pointer hover:border-primary/50 transition-colors select-none"
+              className={cn(
+                'relative flex items-center h-10 rounded-md border border-input bg-background px-3 gap-2 cursor-pointer hover:border-primary/50 transition-colors select-none',
+                formErrors.reported_at && 'border-destructive',
+              )}
             >
               <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className={`text-sm flex-1 ${form.reported_at ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -461,23 +654,42 @@ function AddFindingModal({ users, onClose, onSaved, token }: {
                 type="date"
                 value={form.reported_at}
                 max={today}
-                onChange={e => setForm(f => ({ ...f, reported_at: e.target.value }))}
+                onChange={e => {
+                  clearField('reported_at');
+                  setForm(f => ({ ...f, reported_at: e.target.value }));
+                }}
                 className="absolute opacity-0 w-0 h-0 pointer-events-none"
                 tabIndex={-1}
               />
             </div>
+            {formErrors.reported_at ? <p className="text-xs text-destructive">{formErrors.reported_at}</p> : null}
           </div>
         </div>
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <BookOpen className="h-3.5 w-3.5 text-primary" />
-            Vulnerability Write-up
+            Vulnerability Write-up *
           </Label>
-          <BlogEditor
-            value={form.blog_content}
-            onChange={v => setForm(f => ({ ...f, blog_content: v }))}
-            placeholder="Write a detailed vulnerability write-up…"
-          />
+          <div
+            className={cn(
+              'rounded-lg overflow-hidden',
+              formErrors.blog_content && 'ring-2 ring-destructive ring-offset-2 ring-offset-background',
+            )}
+          >
+            <BlogEditor
+              value={form.blog_content}
+              onChange={v => {
+                clearField('blog_content');
+                setForm(f => ({ ...f, blog_content: v }));
+              }}
+              placeholder="Write a detailed vulnerability write-up…"
+            />
+          </div>
+          {formErrors.blog_content ? (
+            <p className="text-xs text-destructive">{formErrors.blog_content}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">At least 50 characters of visible text (formatting does not count).</p>
+          )}
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <DialogClose asChild>
