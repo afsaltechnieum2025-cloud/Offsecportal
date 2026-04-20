@@ -65,6 +65,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { API as API_BASE } from '@/utils/api';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,139 @@ const authHeaders = (): HeadersInit => {
   };
 };
 
+// ─── Create-project validation (new project dialog only) ───────────────────
+
+const RE_NO_CONTROL = /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F]{2,200}$/;
+const RE_MULTILINE_TEXT = /^[^\x00]{10,8000}$/;
+const RE_DOMAIN =
+  /^(?:localhost|(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}))$/i;
+const RE_FUNCTIONALITIES = /^[\p{L}\p{N}_\s.,;:/+\-–—()*\n#]{1,2000}$/u;
+const RE_ASSIGNED_FOR = /^[\p{L}\p{N}_\s.,&\-–—/()'"]{1,1000}$/u;
+const RE_AUTH_METHOD = /^[\p{L}\p{N}_\s.,;:/+\-–—()&]{1,1000}$/u;
+const RE_TECH_STACK = /^[\p{L}\p{N}_\s.,+#\-/()+]{1,600}$/u;
+const RE_TEST_CREDENTIALS = /^[\s\S]{1,8000}$/;
+
+const IPV4_OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`;
+const RE_SINGLE_IPV4 = new RegExp(
+  String.raw`^${IPV4_OCTET}\.${IPV4_OCTET}\.${IPV4_OCTET}\.${IPV4_OCTET}(?:\/(?:[0-9]|[12]\d|3[0-2]))?$`
+);
+
+function isValidOptionalIpList(value: string): boolean {
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.every((p) => RE_SINGLE_IPV4.test(p));
+}
+
+type CreateProjectFormErrors = Partial<
+  Record<
+    | 'name'
+    | 'client'
+    | 'description'
+    | 'scope'
+    | 'domain'
+    | 'startDate'
+    | 'endDate'
+    | 'business_logic'
+    | 'entry_points'
+    | 'auth_controls'
+    | 'test_credentials'
+    | 'ip_addresses'
+    | 'tech_stack',
+    string
+  >
+>;
+
+type NewProjectFieldsForValidation = {
+  name: string;
+  client: string;
+  description: string;
+  scope: string;
+  domain: string;
+  business_logic: string;
+  entry_points: string;
+  auth_controls: string;
+  test_credentials: string;
+  ip_addresses: string;
+  tech_stack: string;
+};
+
+function validateNewProjectForm(
+  fields: NewProjectFieldsForValidation,
+  createStartDate: Date | undefined,
+  createEndDate: Date | undefined
+): CreateProjectFormErrors {
+  const errors: CreateProjectFormErrors = {};
+  const name = fields.name.trim();
+  const client = fields.client.trim();
+  const description = fields.description.trim();
+  const scope = fields.scope.trim();
+  const domain = fields.domain.trim();
+
+  if (!name) errors.name = 'Project name is required.';
+  else if (!RE_NO_CONTROL.test(name)) errors.name = 'Use 2–200 characters; control characters are not allowed.';
+
+  if (!client) errors.client = 'Client name is required.';
+  else if (!RE_NO_CONTROL.test(client)) errors.client = 'Use 2–200 characters; control characters are not allowed.';
+
+  if (!description) errors.description = 'Description is required.';
+  else if (!RE_MULTILINE_TEXT.test(description)) errors.description = 'Use 10–8000 characters (no null bytes).';
+
+  if (!scope) errors.scope = 'Engagement scope is required.';
+  else if (!RE_MULTILINE_TEXT.test(scope)) errors.scope = 'Use 10–8000 characters (no null bytes).';
+
+  if (!domain) errors.domain = 'Target domain is required.';
+  else if (!RE_DOMAIN.test(domain)) errors.domain = 'Enter a valid hostname (e.g., example.com or sub.example.co.uk).';
+
+  if (!createStartDate) errors.startDate = 'Start date is required.';
+  if (!createEndDate) errors.endDate = 'End date is required.';
+  if (createStartDate && createEndDate) {
+    const s = new Date(createStartDate);
+    s.setHours(0, 0, 0, 0);
+    const e = new Date(createEndDate);
+    e.setHours(0, 0, 0, 0);
+    if (e < s) errors.endDate = 'End date must be on or after the start date.';
+  }
+
+  const bl = fields.business_logic.trim();
+  if (bl && !RE_FUNCTIONALITIES.test(bl)) {
+    errors.business_logic =
+      'Allowed: letters, numbers, common punctuation, and newlines (max 2000 characters).';
+  }
+
+  const ef = fields.entry_points.trim();
+  if (ef && !RE_ASSIGNED_FOR.test(ef)) {
+    errors.entry_points =
+      'Allowed: letters, numbers, spaces, and common punctuation (max 1000 characters).';
+  }
+
+  const am = fields.auth_controls.trim();
+  if (am && !RE_AUTH_METHOD.test(am)) {
+    errors.auth_controls =
+      'Allowed: letters, numbers, spaces, and common punctuation (max 1000 characters).';
+  }
+
+  const tc = fields.test_credentials;
+  if (tc.trim()) {
+    if (!RE_TEST_CREDENTIALS.test(tc) || tc.includes('\x00')) {
+      errors.test_credentials = 'Use 1–8000 characters; null bytes are not allowed.';
+    }
+  }
+
+  const ips = fields.ip_addresses.trim();
+  if (ips && !isValidOptionalIpList(ips)) {
+    errors.ip_addresses =
+      'Use comma-separated IPv4 addresses, optional /0–32 CIDR (e.g., 192.168.1.1, 10.0.0.0/24).';
+  }
+
+  const ts = fields.tech_stack.trim();
+  if (ts && !RE_TECH_STACK.test(ts)) {
+    errors.tech_stack =
+      'Allowed: letters, numbers, spaces, commas, and common symbols (max 600 characters).';
+  }
+
+  return errors;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Projects() {
@@ -164,6 +298,21 @@ export default function Projects() {
     end_date: '',
     status: 'active',
   });
+
+  const [createFormErrors, setCreateFormErrors] = useState<CreateProjectFormErrors>({});
+
+  const clearCreateFieldError = (key: keyof CreateProjectFormErrors) => {
+    setCreateFormErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const handleCreateDialogOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) setCreateFormErrors({});
+  };
 
   const [editProject, setEditProject] = useState({
     id: '',
@@ -371,8 +520,26 @@ export default function Projects() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProject.name || !newProject.client) {
-      toast.error('Project name and client are required');
+    const validation = validateNewProjectForm(
+      {
+        name: newProject.name,
+        client: newProject.client,
+        description: newProject.description,
+        scope: newProject.scope,
+        domain: newProject.domain,
+        business_logic: newProject.business_logic,
+        entry_points: newProject.entry_points,
+        auth_controls: newProject.auth_controls,
+        test_credentials: newProject.test_credentials,
+        ip_addresses: newProject.ip_addresses,
+        tech_stack: newProject.tech_stack,
+      },
+      createStartDate,
+      createEndDate
+    );
+    setCreateFormErrors(validation);
+    if (Object.keys(validation).length > 0) {
+      toast.error('Please fix the highlighted fields.');
       return;
     }
 
@@ -416,6 +583,7 @@ export default function Projects() {
 
       toast.success('Project created successfully!');
       setIsDialogOpen(false);
+      setCreateFormErrors({});
       setNewProject({
         name: '', client: '', description: '',
         business_logic: '', entry_points: '', auth_controls: '',
@@ -659,7 +827,7 @@ export default function Projects() {
           </Select>
 
           {isAdminOrManager && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={handleCreateDialogOpenChange}>
               <DialogTrigger asChild>
                 <Button className="gradient-technieum"><Plus className="h-4 w-4 mr-2" />New Project</Button>
               </DialogTrigger>
@@ -674,160 +842,292 @@ export default function Projects() {
                       <Input
                         placeholder="e.g., Security Assessment Q1 2026"
                         value={newProject.name}
-                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('name');
+                          setNewProject({ ...newProject, name: e.target.value });
+                        }}
                         required
+                        className={cn(createFormErrors.name && 'border-destructive')}
                       />
+                      {createFormErrors.name ? (
+                        <p className="text-xs text-destructive">{createFormErrors.name}</p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       <Label>Client Name *</Label>
                       <Input
                         placeholder="e.g., Acme Corporation"
                         value={newProject.client}
-                        onChange={(e) => setNewProject({ ...newProject, client: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('client');
+                          setNewProject({ ...newProject, client: e.target.value });
+                        }}
                         required
+                        className={cn(createFormErrors.client && 'border-destructive')}
                       />
+                      {createFormErrors.client ? (
+                        <p className="text-xs text-destructive">{createFormErrors.client}</p>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label>Description *</Label>
                     <Textarea
                       placeholder="Describe the project scope, objectives, and any special requirements..."
                       value={newProject.description}
-                      onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                      onChange={(e) => {
+                        clearCreateFieldError('description');
+                        setNewProject({ ...newProject, description: e.target.value });
+                      }}
                       rows={3}
+                      required
+                      className={cn(createFormErrors.description && 'border-destructive')}
                     />
+                    {createFormErrors.description ? (
+                      <p className="text-xs text-destructive">{createFormErrors.description}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">10–8000 characters</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1.5">
-                        <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />Business logic flows
+                        <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />
+                        No. of functionalities <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                       </Label>
                       <Textarea
-                        placeholder="Document how the app works for testers — key workflows, states, and rules."
+                        placeholder="e.g., count or list of functionalities, modules, or features in scope."
                         value={newProject.business_logic}
-                        onChange={(e) => setNewProject({ ...newProject, business_logic: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('business_logic');
+                          setNewProject({ ...newProject, business_logic: e.target.value });
+                        }}
                         rows={3}
+                        className={cn(createFormErrors.business_logic && 'border-destructive')}
                       />
+                      {createFormErrors.business_logic ? (
+                        <p className="text-xs text-destructive">{createFormErrors.business_logic}</p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1.5">
-                        <Network className="h-3.5 w-3.5 text-primary shrink-0" />Entry points &amp; workflow
+                        <Network className="h-3.5 w-3.5 text-primary shrink-0" />
+                        Assigned For <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                       </Label>
                       <Textarea
-                        placeholder="Login pages, APIs, upload endpoints, admin panels, etc."
+                        placeholder="e.g., team, role, or stakeholder this engagement is assigned to."
                         value={newProject.entry_points}
-                        onChange={(e) => setNewProject({ ...newProject, entry_points: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('entry_points');
+                          setNewProject({ ...newProject, entry_points: e.target.value });
+                        }}
                         rows={3}
+                        className={cn(createFormErrors.entry_points && 'border-destructive')}
                       />
+                      {createFormErrors.entry_points ? (
+                        <p className="text-xs text-destructive">{createFormErrors.entry_points}</p>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />Authentication &amp; access controls
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                      Authentication method <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                     </Label>
                     <Textarea
-                      placeholder="SSO, OAuth, JWT, roles, MFA, session handling, etc."
+                      placeholder="e.g., SSO, OAuth, JWT, MFA, API keys, basic auth, session handling."
                       value={newProject.auth_controls}
-                      onChange={(e) => setNewProject({ ...newProject, auth_controls: e.target.value })}
+                      onChange={(e) => {
+                        clearCreateFieldError('auth_controls');
+                        setNewProject({ ...newProject, auth_controls: e.target.value });
+                      }}
                       rows={3}
+                      className={cn(createFormErrors.auth_controls && 'border-destructive')}
                     />
+                    {createFormErrors.auth_controls ? (
+                      <p className="text-xs text-destructive">{createFormErrors.auth_controls}</p>
+                    ) : null}
                   </div>
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement scope
+                      <Crosshair className="h-3.5 w-3.5 text-primary" />Engagement scope *
                     </Label>
                     <Textarea
                       placeholder="Define what is in scope and out of scope — e.g., included domains, IP ranges, excluded environments, test boundaries..."
                       value={newProject.scope}
-                      onChange={(e) => setNewProject({ ...newProject, scope: e.target.value })}
+                      onChange={(e) => {
+                        clearCreateFieldError('scope');
+                        setNewProject({ ...newProject, scope: e.target.value });
+                      }}
                       rows={3}
+                      required
+                      className={cn(createFormErrors.scope && 'border-destructive')}
                     />
-                    <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets for this engagement</p>
+                    {createFormErrors.scope ? (
+                      <p className="text-xs text-destructive">{createFormErrors.scope}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Clearly describe in-scope and out-of-scope assets (10–8000 characters)</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <KeyRound className="h-3.5 w-3.5 text-primary" />Testing credentials
+                      <KeyRound className="h-3.5 w-3.5 text-primary" />
+                      Testing credentials <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                     </Label>
                     <div className="relative">
                       <Textarea
                         placeholder="e.g., Username: testuser@example.com / Password: Test@1234&#10;Role: Admin — URL: https://app.example.com/login"
                         value={newProject.test_credentials}
-                        onChange={(e) => setNewProject({ ...newProject, test_credentials: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('test_credentials');
+                          setNewProject({ ...newProject, test_credentials: e.target.value });
+                        }}
                         rows={3}
-                        className="border-orange-500/40 bg-orange-500/5 focus:border-orange-500/70 placeholder:text-muted-foreground/50 font-mono text-sm"
+                        className={cn(
+                          'border-orange-500/40 bg-orange-500/5 focus:border-orange-500/70 placeholder:text-muted-foreground/50 font-mono text-sm',
+                          createFormErrors.test_credentials && 'border-destructive'
+                        )}
                       />
                     </div>
-                    <p className="text-xs text-orange-400/80 flex items-center gap-1">
-                      <KeyRound className="h-3 w-3" />Store test account credentials used during this engagement
-                    </p>
+                    {createFormErrors.test_credentials ? (
+                      <p className="text-xs text-destructive">{createFormErrors.test_credentials}</p>
+                    ) : (
+                      <p className="text-xs text-orange-400/80 flex items-center gap-1">
+                        <KeyRound className="h-3 w-3" />If provided: 1–8000 characters, no null bytes
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Target Domain</Label>
+                      <Label>Target Domain *</Label>
                       <Input
                         placeholder="e.g., example.com"
                         value={newProject.domain}
-                        onChange={(e) => setNewProject({ ...newProject, domain: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('domain');
+                          setNewProject({ ...newProject, domain: e.target.value });
+                        }}
+                        required
+                        className={cn(createFormErrors.domain && 'border-destructive')}
                       />
-                      <p className="text-xs text-muted-foreground">Primary domain for the assessment</p>
+                      {createFormErrors.domain ? (
+                        <p className="text-xs text-destructive">{createFormErrors.domain}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Primary domain for the assessment</p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label>Target IPs</Label>
+                      <Label>
+                        Target IPs <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                      </Label>
                       <Input
-                        placeholder="e.g., 192.168.1.1, 10.0.0.1"
+                        placeholder="e.g., 192.168.1.1, 10.0.0.0/24"
                         value={newProject.ip_addresses}
-                        onChange={(e) => setNewProject({ ...newProject, ip_addresses: e.target.value })}
+                        onChange={(e) => {
+                          clearCreateFieldError('ip_addresses');
+                          setNewProject({ ...newProject, ip_addresses: e.target.value });
+                        }}
+                        className={cn(createFormErrors.ip_addresses && 'border-destructive')}
                       />
-                      <p className="text-xs text-muted-foreground">Comma-separated IP addresses or ranges</p>
+                      {createFormErrors.ip_addresses ? (
+                        <p className="text-xs text-destructive">{createFormErrors.ip_addresses}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Comma-separated IPv4, optional CIDR mask /0–32</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
-                      <Layers className="h-3.5 w-3.5 text-primary shrink-0" />Tech stack
+                      <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                      Tech stack <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                     </Label>
                     <Input
                       placeholder="e.g., React, Node.js, PostgreSQL, AWS (comma-separated)"
                       value={newProject.tech_stack}
-                      onChange={(e) => setNewProject({ ...newProject, tech_stack: e.target.value })}
+                      onChange={(e) => {
+                        clearCreateFieldError('tech_stack');
+                        setNewProject({ ...newProject, tech_stack: e.target.value });
+                      }}
+                      className={cn(createFormErrors.tech_stack && 'border-destructive')}
                     />
-                    <p className="text-xs text-muted-foreground">Shown on the project overview as tags</p>
+                    {createFormErrors.tech_stack ? (
+                      <p className="text-xs text-destructive">{createFormErrors.tech_stack}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Shown on the project overview as tags</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Date</Label>
+                      <Label>Start Date *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal bg-background">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              'w-full justify-start text-left font-normal bg-background',
+                              createFormErrors.startDate && 'border-destructive'
+                            )}
+                          >
                             <Calendar className="mr-2 h-4 w-4" />
                             {createStartDate ? format(createStartDate, 'PPP') : 'Select start date'}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent mode="single" selected={createStartDate} onSelect={setCreateStartDate} initialFocus />
+                          <CalendarComponent
+                            mode="single"
+                            selected={createStartDate}
+                            onSelect={(d) => {
+                              clearCreateFieldError('startDate');
+                              setCreateStartDate(d);
+                            }}
+                            initialFocus
+                          />
                         </PopoverContent>
                       </Popover>
+                      {createFormErrors.startDate ? (
+                        <p className="text-xs text-destructive">{createFormErrors.startDate}</p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
-                      <Label>End Date</Label>
+                      <Label>End Date *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal bg-background">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              'w-full justify-start text-left font-normal bg-background',
+                              createFormErrors.endDate && 'border-destructive'
+                            )}
+                          >
                             <Calendar className="mr-2 h-4 w-4" />
                             {createEndDate ? format(createEndDate, 'PPP') : 'Select end date'}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent mode="single" selected={createEndDate} onSelect={setCreateEndDate} initialFocus />
+                          <CalendarComponent
+                            mode="single"
+                            selected={createEndDate}
+                            onSelect={(d) => {
+                              clearCreateFieldError('endDate');
+                              setCreateEndDate(d);
+                            }}
+                            initialFocus
+                          />
                         </PopoverContent>
                       </Popover>
+                      {createFormErrors.endDate ? (
+                        <p className="text-xs text-destructive">{createFormErrors.endDate}</p>
+                      ) : null}
                     </div>
                   </div>
 
@@ -1099,10 +1399,10 @@ export default function Projects() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
-                    <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />Business logic flows
+                    <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />No. of functionalities
                   </Label>
                   <Textarea
-                    placeholder="Document how the app works for testers — key workflows, states, and rules."
+                    placeholder="e.g., count or list of functionalities, modules, or features in scope."
                     value={editProject.business_logic}
                     onChange={(e) => setEditProject({ ...editProject, business_logic: e.target.value })}
                     rows={3}
@@ -1110,10 +1410,10 @@ export default function Projects() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
-                    <Network className="h-3.5 w-3.5 text-primary shrink-0" />Entry points &amp; workflow
+                    <Network className="h-3.5 w-3.5 text-primary shrink-0" />Assigned For
                   </Label>
                   <Textarea
-                    placeholder="Login pages, APIs, upload endpoints, admin panels, etc."
+                    placeholder="e.g., team, role, or stakeholder this engagement is assigned to."
                     value={editProject.entry_points}
                     onChange={(e) => setEditProject({ ...editProject, entry_points: e.target.value })}
                     rows={3}
@@ -1123,10 +1423,10 @@ export default function Projects() {
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />Authentication &amp; access controls
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />Authentication method
                 </Label>
                 <Textarea
-                  placeholder="SSO, OAuth, JWT, roles, MFA, session handling, etc."
+                  placeholder="e.g., SSO, OAuth, JWT, MFA, API keys, basic auth, session handling."
                   value={editProject.auth_controls}
                   onChange={(e) => setEditProject({ ...editProject, auth_controls: e.target.value })}
                   rows={3}
