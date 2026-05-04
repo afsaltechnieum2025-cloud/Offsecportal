@@ -17,8 +17,23 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: [
+          "system-ui",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
+        ],
+        mono: ["ui-monospace", "Consolas", "monospace"],
+      },
+      maxWidth: {
+        site: "var(--max-width-site)",
+      },
+      screens: {
+        xs: "480px",
+      },
+      boxShadow: {
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-dropdown)",
       },
       colors: {
         border:     "hsl(var(--border))",

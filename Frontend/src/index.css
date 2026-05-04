@@ -1,56 +1,76 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* -------------------------------------------------------------------------- */
-/* Theme tokens — single source for colors, gradients, and shadows              */
-/* Tailwind `hsl(var(--token))` expects values as: hue sat% light% (no hsl())  */
+/* Theme — brand + black-first surfaces (Tailwind uses hsl(var(--token)))     */
+/* Raw hex/rgb tokens mirror @theme for gradients, shadows, one-off CSS.      */
 /* -------------------------------------------------------------------------- */
 
 @layer base {
   :root {
-    /* Surfaces (dark UI scale) */
-    --surface-0: 222 47% 6%;
-    --surface-1: 222 47% 8%;
-    --surface-2: 222 47% 10%;
-    --surface-3: 222 47% 12%;
-    --surface-4: 222 47% 14%;
-    --line: 222 30% 18%;
-    --line-strong: 222 30% 16%;
+    /* Brand (hex) */
+    --color-brand: #e85d04;
+    --color-brand-strong: #c2410c;
+    --color-brand-soft: #9a3412;
 
-    /* Brand gradient stops (yellow → orange → red) */
-    --brand-1: 45 100% 50%;
-    --brand-1-bright: 45 100% 55%;
-    --brand-2: 35 100% 50%;
-    --brand-3: 25 100% 50%;
-    --brand-4: 0 80% 50%;
+    /* Surfaces (hex) */
+    --color-page: #000000;
+    --color-bg-subtle: #030303;
+    --color-bg-inset: #000000;
+    --color-panel: #0a0a0a;
+    --color-panel-hover: #141414;
+    --color-surface-popover: #0a0a0a;
 
-    /* Core semantic colors */
-    --background: var(--surface-0);
-    --foreground: 210 40% 96%;
+    /* Text (hex) */
+    --color-muted: #a1a1aa;
+    --color-heading: #fafafa;
+    --color-on-light-muted: #6b7280;
+    --color-footer-link: rgb(255 255 255 / 0.72);
 
-    --card: var(--surface-1);
-    --card-foreground: 210 40% 96%;
+    /* Borders (hex) */
+    --color-border: #27272a;
+    --color-border-strong: #3f3f46;
 
-    --popover: var(--surface-2);
-    --popover-foreground: 210 40% 96%;
+    /* HSL channels for shadcn / Tailwind */
+    --brand-1: 24 96% 46%;
+    --brand-2: 20 92% 44%;
+    --brand-3: 17 88% 40%;
+    --brand-4: 15 79% 34%;
+
+    --surface-page: 0 0% 0%;
+    --surface-subtle: 0 0% 1%;
+    --surface-inset: 0 0% 0%;
+    --surface-panel: 0 0% 4%;
+    --surface-panel-hover: 0 0% 8%;
+    --surface-popover: 0 0% 4%;
+
+    --line: 240 6% 16%;
+    --line-strong: 240 5% 26%;
+
+    --background: var(--surface-page);
+    --foreground: 0 0% 98%;
+
+    --card: var(--surface-panel);
+    --card-foreground: 0 0% 98%;
+
+    --popover: var(--surface-popover);
+    --popover-foreground: 0 0% 98%;
 
     --primary: var(--brand-1);
-    --primary-foreground: var(--surface-0);
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: var(--surface-4);
-    --secondary-foreground: 210 40% 96%;
+    --secondary: var(--surface-panel-hover);
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: var(--surface-3);
-    --muted-foreground: 215 20% 55%;
+    --muted: var(--surface-subtle);
+    --muted-foreground: 240 5% 66%;
 
     --accent: var(--brand-3);
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
     --border: var(--line);
     --input: var(--line);
@@ -59,51 +79,59 @@
     --radius: 0.75rem;
 
     /* Severity (findings / charts) */
-    --critical: 0 90% 50%;
-    --high: 25 95% 53%;
-    --medium: 45 93% 47%;
-    --low: 142 76% 36%;
+    --critical: 0 84% 60%;
+    --high: 17 88% 48%;
+    --medium: 38 92% 50%;
+    --low: 142 70% 45%;
     --info: 199 89% 48%;
 
-    /* Gradients — derived from brand + surfaces */
     --gradient-primary: linear-gradient(
       135deg,
-      hsl(var(--brand-1)),
-      hsl(var(--brand-3)),
-      hsl(var(--brand-4))
+      var(--color-brand),
+      var(--color-brand-strong),
+      var(--color-brand-soft)
     );
     --gradient-technieum: linear-gradient(
       135deg,
-      hsl(var(--brand-1-bright)) 0%,
-      hsl(var(--brand-2)) 50%,
-      hsl(var(--brand-4)) 100%
+      var(--color-brand) 0%,
+      var(--color-brand-strong) 52%,
+      var(--color-brand-soft) 100%
     );
     --gradient-sidebar: linear-gradient(
       180deg,
-      hsl(var(--surface-1)),
-      hsl(var(--surface-0))
+      hsl(var(--surface-panel)),
+      hsl(var(--surface-page))
     );
 
-    /* Shadows */
-    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.2);
+    --shadow-md:
+      rgb(0 0 0 / 0.5) 0 12px 24px -4px,
+      rgb(0 0 0 / 0.35) 0 8px 16px -6px;
+    --shadow-dropdown:
+      0 24px 48px rgb(0 0 0 / 0.65),
+      0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-glow: 0 0 32px hsl(var(--primary) / 0.28);
 
-    /* Sidebar */
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 210 40% 96%;
+    --sidebar-background: var(--surface-panel);
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: var(--brand-1);
-    --sidebar-primary-foreground: var(--surface-0);
-    --sidebar-accent: var(--surface-4);
-    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: var(--surface-panel-hover);
+    --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: var(--line-strong);
     --sidebar-ring: var(--brand-1);
 
-    /* Recharts / data viz (align with theme) */
     --chart-grid: var(--border);
     --chart-axis: var(--muted-foreground);
     --chart-tooltip-bg: var(--popover);
     --chart-tooltip-border: var(--border);
     --chart-tooltip-fg: var(--foreground);
     --chart-series-accent: var(--high);
+
+    --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, Consolas, monospace;
+    --max-width-site: 1200px;
+
+    --breakpoint-xs: 480px;
   }
 }
 
@@ -118,15 +146,16 @@ html {
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
+    color: var(--color-heading);
   }
 
   code, pre {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
   }
 }
 
@@ -152,6 +181,14 @@ html {
 
   .glow {
     box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-dropdown {
+    box-shadow: var(--shadow-dropdown);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-md);
   }
 
   .animate-fade-in {

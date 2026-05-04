@@ -10,7 +10,7 @@ export default function Footer() {
           <img src={logo} alt="Technieum" className="h-10 w-auto" />
           <span className="text-sm font-medium text-muted-foreground">OffSec Operations</span>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-[var(--color-footer-link)]">
           © {currentYear} Technieum. All rights reserved.
         </p>
       </div>
