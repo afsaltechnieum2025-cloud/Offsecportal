@@ -27,32 +27,37 @@ function timeAgo(dateStr: string) {
 const TYPE_CONFIG: Record<string, {
   IconComponent: React.ElementType;
   bg: string;
+  border: string;
   iconColor: string;
   dot: string;
 }> = {
   finding: {
     IconComponent: Search,
-    bg: 'rgba(239,68,68,0.08)',
-    iconColor: '#ef4444',
-    dot: '#ef4444',
+    bg: 'hsl(var(--destructive) / 0.12)',
+    border: 'hsl(var(--destructive) / 0.22)',
+    iconColor: 'hsl(var(--destructive))',
+    dot: 'hsl(var(--destructive))',
   },
   project: {
     IconComponent: FolderOpen,
-    bg: 'rgba(59,130,246,0.08)',
-    iconColor: '#3b82f6',
-    dot: '#3b82f6',
+    bg: 'hsl(var(--info) / 0.12)',
+    border: 'hsl(var(--info) / 0.22)',
+    iconColor: 'hsl(var(--info))',
+    dot: 'hsl(var(--info))',
   },
   user: {
     IconComponent: User,
-    bg: 'rgba(249,115,22,0.1)',
-    iconColor: '#f97316',
-    dot: '#f97316',
+    bg: 'hsl(var(--primary) / 0.12)',
+    border: 'hsl(var(--primary) / 0.22)',
+    iconColor: 'var(--color-brand)',
+    dot: 'var(--color-brand)',
   },
   general: {
     IconComponent: Bell,
-    bg: 'rgba(249,115,22,0.06)',
-    iconColor: '#f97316',
-    dot: '#f97316',
+    bg: 'hsl(var(--primary) / 0.08)',
+    border: 'hsl(var(--primary) / 0.18)',
+    iconColor: 'var(--color-brand)',
+    dot: 'var(--color-brand-strong)',
   },
 };
 
@@ -64,9 +69,10 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
       <div style={{
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '48px 16px', color: '#4b5563',
+        padding: '48px 16px',
+        color: 'hsl(var(--muted-foreground))',
       }}>
-        <Bell size={36} style={{ opacity: 0.2, marginBottom: '12px' }} />
+        <Bell size={36} style={{ opacity: 0.25, marginBottom: '12px', color: 'hsl(var(--muted-foreground))' }} />
         <p style={{ fontSize: '13px', margin: 0 }}>No notifications yet</p>
         <p style={{ fontSize: '11px', margin: '4px 0 0', opacity: 0.6, textAlign: 'center', maxWidth: 260, lineHeight: 1.45 }}>
           Admins and managers see activity across the portal. Testers see their assigned projects and their own actions.
@@ -88,15 +94,15 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
               gap: '12px',
               padding: '12px 16px',
               borderBottom: i < notifications.length - 1
-                ? '1px solid rgba(255,255,255,0.04)' : 'none',
-              background: !n.is_read ? 'rgba(249,115,22,0.04)' : 'transparent',
+                ? '1px solid hsl(var(--border))' : 'none',
+              background: !n.is_read ? 'hsl(var(--primary) / 0.06)' : 'transparent',
             }}
           >
             <div style={{
               width: '36px', height: '36px',
               borderRadius: '10px',
               background: cfg.bg,
-              border: `1px solid ${cfg.iconColor}33`,
+              border: `1px solid ${cfg.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
@@ -109,7 +115,7 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
                   margin: 0,
                   fontSize: '13px',
                   fontWeight: !n.is_read ? 600 : 400,
-                  color: !n.is_read ? '#ffffff' : '#d1d5db',
+                  color: !n.is_read ? 'var(--color-heading)' : 'hsl(var(--muted-foreground))',
                   lineHeight: 1.3,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -132,7 +138,7 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
               </div>
               <p style={{
                 margin: '3px 0 0', fontSize: '11px',
-                color: '#6b7280', lineHeight: 1.45,
+                color: 'var(--color-on-light-muted)', lineHeight: 1.45,
                 overflow: 'hidden',
                 display: '-webkit-box',
                 WebkitLineClamp: 3,
@@ -140,7 +146,7 @@ function NotificationList({ notifications }: { notifications: Notification[] }) 
               }}>
                 {n.message}
               </p>
-              <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#374151' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'hsl(var(--muted-foreground) / 0.85)' }}>
                 {timeAgo(n.created_at)}
               </p>
             </div>
@@ -158,23 +164,23 @@ function PanelHeader({ count }: { count: number }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '14px 16px',
-      borderBottom: '1px solid rgba(255,255,255,0.07)',
-      background: 'rgba(249,115,22,0.05)',
+      borderBottom: '1px solid hsl(var(--border))',
+      background: 'hsl(var(--primary) / 0.06)',
       flexShrink: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{
           width: '3px', height: '16px',
-          background: 'linear-gradient(180deg, #f97316, #ef4444)',
+          background: 'linear-gradient(180deg, var(--color-brand), var(--color-brand-strong))',
           borderRadius: '2px',
         }} />
-        <Bell size={14} color="#f97316" />
-        <span id="notification-panel-title" style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+        <Bell size={14} color="var(--color-brand)" />
+        <span id="notification-panel-title" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>
           Notifications
         </span>
         <span style={{
-          fontSize: '10px', color: '#6b7280',
-          background: 'rgba(255,255,255,0.06)',
+          fontSize: '10px', color: 'hsl(var(--muted-foreground))',
+          background: 'hsl(var(--muted-foreground) / 0.1)',
           padding: '1px 6px', borderRadius: '999px',
         }}>
           {count}
@@ -194,12 +200,12 @@ function PanelFooter({ count, isMobile }: { count: number; isMobile: boolean }) 
     <div style={{
       padding: '10px 16px',
       paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom))' : '10px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(249,115,22,0.03)',
+      borderTop: '1px solid hsl(var(--border))',
+      background: 'hsl(var(--primary) / 0.04)',
       textAlign: 'center',
       flexShrink: 0,
     }}>
-      <span style={{ fontSize: '11px', color: '#4b5563' }}>
+      <span style={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))' }}>
         Showing last {count} notifications
       </span>
     </div>
@@ -323,10 +329,10 @@ export default function NotificationBell() {
             width: '100%',
             maxWidth: 400,
             maxHeight: 'min(85dvh, calc(100vh - 32px))',
-            background: '#0d0d1a',
+            background: 'hsl(var(--popover))',
             borderRadius: 16,
-            border: '1px solid rgba(249,115,22,0.25)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.65)',
+            border: '1px solid hsl(var(--border))',
+            boxShadow: 'var(--shadow-dropdown)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -362,10 +368,10 @@ export default function NotificationBell() {
             position: 'relative',
             padding: '8px',
             borderRadius: '10px',
-            background: open ? 'rgba(249,115,22,0.12)' : 'transparent',
-            border: open ? '1px solid rgba(249,115,22,0.3)' : '1px solid transparent',
+            background: open ? 'hsl(var(--primary) / 0.14)' : 'transparent',
+            border: open ? '1px solid hsl(var(--primary) / 0.35)' : '1px solid transparent',
             cursor: 'pointer',
-            color: open ? '#f97316' : '#9ca3af',
+            color: open ? 'var(--color-brand)' : 'hsl(var(--muted-foreground))',
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
@@ -380,11 +386,11 @@ export default function NotificationBell() {
               minWidth: '18px', height: '18px',
               padding: '0 4px',
               fontSize: '10px', fontWeight: 700,
-              background: 'linear-gradient(135deg, #f97316, #ef4444)',
-              color: '#fff',
+              background: 'var(--gradient-primary)',
+              color: 'var(--color-heading)',
               borderRadius: '999px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 0 2px #0a0a14',
+              boxShadow: '0 0 0 2px var(--color-page)',
             }}>
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
@@ -400,10 +406,10 @@ export default function NotificationBell() {
               right: 0,
               top: 'calc(100% + 8px)',
               width: '380px',
-              background: '#0d0d1a',
-              border: '1px solid rgba(249,115,22,0.2)',
+              background: 'hsl(var(--popover))',
+              border: '1px solid hsl(var(--border))',
               borderRadius: '14px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+              boxShadow: 'var(--shadow-dropdown)',
               zIndex: 9999,
               overflow: 'hidden',
               display: 'flex',
